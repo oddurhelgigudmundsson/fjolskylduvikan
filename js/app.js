@@ -1,7 +1,7 @@
 import { createBackend } from './data.js';
 import { CALENDAR_FUNCTION } from './config.js';
 
-const APP_VERSION = 'fv-v15';
+const APP_VERSION = 'fv-v16';
 import {
   DAYS, DAYS_SHORT, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -1027,6 +1027,27 @@ function choreRow(c, kidId, { compact = false } = {}) {
     </li>`;
 }
 
+// Verk sem bíða seinna í vikunni (til sunnudags)
+function laterThisWeek(kidId) {
+  const sunday = iso(addDays(startOfWeek(new Date()), 6));
+  const rows = [];
+  for (let d = addDays(new Date(), 1); iso(d) <= sunday; d = addDays(d, 1)) {
+    const day = iso(d);
+    const list = state.chores.filter((c) => choreOn(c, day) && choreFor(c, kidId) && (c.repeat_days || []).length < 7);
+    if (list.length) rows.push({ d, list });
+  }
+  if (!rows.length) return '';
+  return `
+    <section class="card">
+      <div class="card-label">📅 Seinna í vikunni</div>
+      <ul class="later-list">${rows.map(({ d, list }) => `
+        <li><span class="later-day">${esc(DAYS_SHORT[d.getDay()])}</span>
+          <span class="later-chores">${list.map((c) => `<span>${esc(c.emoji)} ${esc(c.title)} <span class="muted small">${c.points} ⭐</span></span>`).join('')}</span></li>`).join('')}
+      </ul>
+      <p class="muted small">Verk sem eru alla daga eru ekki talin upp hér.</p>
+    </section>`;
+}
+
 function myChoresCard() {
   if (state.me.role !== 'child' || !state.chores.length) return '';
   const list = choresToday(state.me.id);
@@ -1159,7 +1180,8 @@ function renderChores(view) {
         <div class="card-label">🧹 Verkin mín í dag</div>
         ${list.length ? `<ul class="chore-list">${list.map((c) => choreRow(c, state.me.id)).join('')}</ul>` : '<p class="muted">Engin verk í dag 🎉</p>'}
         <p class="muted small">Ýttu á verk þegar það er búið. Stærri verk þarf mamma eða pabbi að samþykkja.</p>
-      </section>`;
+      </section>
+      ${laterThisWeek(state.me.id)}`;
   }
 
   let parentView = '';

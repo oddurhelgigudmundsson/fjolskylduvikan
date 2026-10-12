@@ -279,6 +279,11 @@ main { padding: 4px 16px calc(env(safe-area-inset-bottom) + 96px); display: flex
 .board-name { flex: 1; font-weight: 700; }
 .board-pts { font-size: 16px; text-align: right; }
 .board-foot { margin-top: 6px; }
+.later-list { list-style: none; margin: 4px 0 6px; padding: 0; }
+.later-list li { display: flex; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); }
+.later-list li:first-child { border-top: 0; }
+.later-day { width: 40px; flex: none; font-weight: 700; color: var(--muted); }
+.later-chores { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
 .big-points { font-size: 44px; font-weight: 800; line-height: 1.1; }
 .big-points span { font-size: 18px; font-weight: 600; color: var(--muted); }
 .trophy-line { font-weight: 700; margin-top: 6px; }
