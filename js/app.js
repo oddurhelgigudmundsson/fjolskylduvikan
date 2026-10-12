@@ -1,7 +1,7 @@
 import { createBackend } from './data.js';
 import { CALENDAR_FUNCTION } from './config.js';
 
-const APP_VERSION = 'fv-v14';
+const APP_VERSION = 'fv-v15';
 import {
   DAYS, DAYS_SHORT, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -1033,19 +1033,18 @@ function myChoresCard() {
   const todo = list.filter((c) => !logOf(c, state.me.id) && !takenBy(c));
   const pending = list.filter((c) => logOf(c, state.me.id)?.status === 'pending');
   const t = weekTotals(mondayIso())[state.me.id] || { points: 0 };
-  const rank = rankOf(state.me.id);
   return `
     <section class="card chores-card">
       <div class="card-head">
         <div class="card-label">🧹 Verkin mín í dag</div>
-        <button class="link small" data-go="chores">Stigatafla ›</button>
+        <button class="link small" data-go="chores">Verk ›</button>
       </div>
       ${todo.length || pending.length
         ? `<ul class="chore-list">${[...todo, ...pending].map((c) => choreRow(c, state.me.id, { compact: true })).join('')}</ul>`
         : `<p class="muted">${list.length ? 'Öll verkin búin í dag! 💪' : 'Engin verk í dag.'}</p>`}
       <div class="my-score">
         ${trophyHolders().ids.includes(state.me.id) ? '<span>🏆 Þú ert með bikarinn!</span>' : ''}
-        <span><strong>${t.points} ⭐</strong> í vikunni${t.points ? ` · ${rank}. sæti` : ''}</span>
+        <span><strong>${t.points} ⭐</strong> í vikunni</span>
       </div>
     </section>`;
 }
@@ -1186,9 +1185,22 @@ function renderChores(view) {
       <button class="btn big" id="manage-chores">⚙️ Sýsla með verkin</button>`;
   }
 
+  // Bara foreldrar sjá stigatöfluna; börnin sjá sín eigin stig
+  let myPoints = '';
+  if (state.me.role === 'child') {
+    const t = weekTotals(mon)[state.me.id] || { points: 0, pending: 0 };
+    myPoints = `
+      <section class="card board my-points">
+        <div class="card-label">⭐ Stigin mín í vikunni</div>
+        <div class="big-points">${t.points}<span> stig</span></div>
+        ${t.pending ? `<p class="muted small">+${t.pending} bíða samþykkis</p>` : ''}
+        ${holders.ids.includes(state.me.id) ? '<p class="trophy-line">🏆 Þú ert með bikarinn!</p>' : ''}
+      </section>`;
+  }
+
   view.innerHTML = `
     <section class="hero compact"><h1>Verk</h1></section>
-    ${board}
+    ${isParent() ? board : myPoints}
     ${mine}
     ${parentView}`;
   bindChoreButtons(view);

@@ -279,6 +279,9 @@ main { padding: 4px 16px calc(env(safe-area-inset-bottom) + 96px); display: flex
 .board-name { flex: 1; font-weight: 700; }
 .board-pts { font-size: 16px; text-align: right; }
 .board-foot { margin-top: 6px; }
+.big-points { font-size: 44px; font-weight: 800; line-height: 1.1; }
+.big-points span { font-size: 18px; font-weight: 600; color: var(--muted); }
+.trophy-line { font-weight: 700; margin-top: 6px; }
 .trophy-wrap { position: relative; display: inline-block; }
 .trophy-badge { position: absolute; right: -6px; bottom: -4px; font-size: 15px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.3)); }
 
