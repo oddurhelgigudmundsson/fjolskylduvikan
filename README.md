@@ -55,7 +55,7 @@ The **Dagatal** tab shows the Google calendars "Heimilið" and "Heimilið vol.2"
 Setup: in Supabase **Edge Functions → Secrets**, add `ICAL_HEIMILID` and `ICAL_ODDUR` (each calendar's "Secret address in iCal format"). Then deploy the function (its name goes in `CALENDAR_FUNCTION` in `js/config.js`; currently `clever-api`) with **Verify JWT** turned off. The function checks the family login itself.
 
 ## Notifications
-Oddur and Kristín see a **＋** next to their avatar on the home screen. From there they send a message to the whole family or to one person. The message arrives as a push notification on every phone that has notifications turned on, and it also shows in a "Skilaboð" card on the home screen for 24 hours.
+Oddur and Kristín see a **＋** next to their avatar on the home screen. From there they send a message to the whole family or to one person. The message arrives as a push notification on every phone that has notifications turned on, and it also shows in a "Skilaboð" card on the home screen for 1 hour (`NOTICE_TTL` in `js/app.js`). Each person can close a message sooner with ×.
 
 - The same function (`clever-api`) sends the notifications. Its push keys are created automatically the first time and stored in the `app_settings` table, which only the server can read.
 - Database: run `supabase/3-tilkynningar.sql` once.

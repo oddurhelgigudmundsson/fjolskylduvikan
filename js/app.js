@@ -1,7 +1,7 @@
 import { createBackend } from './data.js';
 import { CALENDAR_FUNCTION } from './config.js';
 
-const APP_VERSION = 'fv-v10';
+const APP_VERSION = 'fv-v11';
 import {
   DAYS, DAYS_SHORT, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -945,8 +945,11 @@ const isStandalone = () => window.matchMedia('(display-mode: standalone)').match
 const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent);
 const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 
+// Skilaboð sjást á forsíðunni í 1 klukkutíma
+const NOTICE_TTL = 60 * 60 * 1000;
+
 async function loadNotices() {
-  try { state.notices = await state.backend.listNotices(new Date(Date.now() - 86400000).toISOString()); }
+  try { state.notices = await state.backend.listNotices(new Date(Date.now() - NOTICE_TTL).toISOString()); }
   catch (e) { state.notices = []; }          // taflan ekki til ennþá → engin skilaboð
 }
 
@@ -972,7 +975,10 @@ function dismissNotice(id) {
 
 function noticesCard() {
   const hidden = new Set(dismissed());
-  const mine = state.notices.filter((n) => (!n.to_id || n.to_id === state.me.id) && !hidden.has(n.id)).slice(0, 3);
+  const fresh = Date.now() - NOTICE_TTL;
+  const mine = state.notices
+    .filter((n) => (!n.to_id || n.to_id === state.me.id) && !hidden.has(n.id) && new Date(n.created_at) > fresh)
+    .slice(0, 3);
   if (!mine.length) return '';
   return `
     <section class="card notices">
