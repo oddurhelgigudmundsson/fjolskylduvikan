@@ -238,6 +238,21 @@ main { padding: 4px 16px calc(env(safe-area-inset-bottom) + 96px); display: flex
 .ingredients { margin: 0 0 6px; padding-left: 20px; }
 .ingredients li { padding: 2px 0; }
 
+/* ---------- Prófílmyndir ---------- */
+.avatar.photo { overflow: hidden; background: var(--card); }
+.avatar.photo img {
+  width: calc(100% - 4px); height: calc(100% - 4px); border-radius: 50%; object-fit: cover; display: block;
+}
+.avatar.xl.photo img { width: calc(100% - 6px); height: calc(100% - 6px); }
+.menu-file { display: flex; align-items: center; gap: 10px; padding: 14px 4px; font-weight: 600; border-bottom: 1px solid var(--line); cursor: pointer; }
+.crop {
+  width: min(280px, 72vw); aspect-ratio: 1; margin: 6px auto 0; border-radius: 50%; overflow: hidden;
+  box-shadow: 0 0 0 4px var(--c), var(--shadow); touch-action: none;
+}
+.crop canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+.zoom { display: flex; align-items: center; gap: 10px; color: var(--muted); font-weight: 700; }
+.zoom input { flex: 1; padding: 0; border: 0; background: none; accent-color: var(--accent); }
+
 /* ---------- Dagatal ---------- */
 .filters {
   display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 4px;

@@ -1,4 +1,5 @@
--- Fjölskylduvikan — gagnagrunnur (útgáfa 1)
+-- Fjölskylduvikan — gagnagrunnur
+-- (Ný uppsetning: þetta dugar. Eldri uppsetning: keyrðu líka 2-myndir.sql.)
 -- Límdu allt þetta inn í Supabase: SQL Editor → New query → Run.
 -- Það er í lagi að keyra þetta oftar en einu sinni.
 
@@ -12,6 +13,7 @@ create table if not exists public.profiles (
   color      text not null,
   emoji      text not null default '🙂',
   pin_hash   text,                             -- null = PIN ekki valið ennþá
+  photo      text,                             -- prófílmynd (lítil JPEG, data-URL)
   sort       int  not null default 0
 );
 

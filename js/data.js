@@ -25,6 +25,11 @@ async function supabaseBackend() {
 
     async listProfiles() { return ok(await sb.from('profiles').select('*').order('sort')); },
     async setPin(id, pin_hash) { ok(await sb.from('profiles').update({ pin_hash }).eq('id', id)); },
+    async setPhoto(id, photo) {
+      const { data, error } = await sb.from('profiles').update({ photo }).eq('id', id).select('id');
+      if (error) throw Object.assign(error, { code: /photo/.test(error.message || '') ? 'no_column' : error.code });
+      if (!data?.length) throw new Error('not_saved');
+    },
 
     async listItems() { return ok(await sb.from('shopping_items').select('*').order('created_at')); },
     async addItems(rows) { ok(await sb.from('shopping_items').insert(rows)); },
@@ -89,6 +94,11 @@ function demoBackend() {
     async setPin(id, pin_hash) {
       const p = read().profiles.find((x) => x.id === id);
       if (p) p.pin_hash = pin_hash;
+      commit('profiles');
+    },
+    async setPhoto(id, photo) {
+      const p = read().profiles.find((x) => x.id === id);
+      if (p) p.photo = photo;
       commit('profiles');
     },
 

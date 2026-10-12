@@ -1,7 +1,7 @@
 import { createBackend } from './data.js';
 import { CALENDAR_FUNCTION } from './config.js';
 
-const APP_VERSION = 'fv-v7';
+const APP_VERSION = 'fv-v8';
 import {
   DAYS, DAYS_SHORT, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -84,11 +84,21 @@ setInterval(() => {
 // Síminn vaknar (app opnað aftur af heimaskjá) → sækja nýjustu gögn
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible' || !state.me) return;
-  await Promise.all([loadItems(), loadMeals()]);
+  await Promise.all([loadItems(), loadMeals(), reloadProfiles()]);
   renderView();
   await loadEvents();
   refreshIf(['home', 'cal']);
 });
+
+// Nýjar myndir annarra koma inn þegar appið er opnað aftur
+async function reloadProfiles() {
+  try {
+    state.profiles = await state.backend.listProfiles();
+    state.me = profileById(state.me.id) || state.me;
+    const btn = document.getElementById('me-btn');
+    if (btn) btn.innerHTML = avatar(state.me);
+  } catch (e) { console.error(e); }
+}
 
 async function loadItems() {
   try { state.items = await state.backend.listItems(); } catch (e) { console.error(e); }
@@ -224,6 +234,9 @@ function renderError(msg) {
 // ==================================================================
 function avatar(p, size = '') {
   if (!p) return `<span class="avatar ${size}" style="--c:#9CA3AF">?</span>`;
+  if (p.photo && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(p.photo)) {
+    return `<span class="avatar photo ${size}" style="--c:${esc(p.color)}" aria-hidden="true"><img src="${p.photo}" alt=""></span>`;
+  }
   return `<span class="avatar ${size}" style="--c:${esc(p.color)}" aria-hidden="true">${esc(p.emoji)}</span>`;
 }
 
@@ -783,6 +796,9 @@ function openMeSheet() {
     <div class="me-head">${avatar(state.me, 'lg')}<div><h2>${esc(state.me.name)}</h2>
       <p class="muted">${isParent() ? 'Foreldri' : 'Fjölskyldumeðlimur'}</p></div></div>
     <div class="menu-list">
+      <label class="menu-file">📷 ${state.me.photo ? 'Skipta um mynd' : 'Setja inn mynd af mér'}
+        <input type="file" accept="image/*" id="photo-input" hidden></label>
+      ${state.me.photo ? '<button id="remove-photo">↩️ Nota emoji í staðinn</button>' : ''}
       <button id="switch-user">🔄 Skipta um notanda</button>
       <button id="change-pin">🔢 Breyta PIN-inu mínu</button>
       ${isParent() && others.length ? `
@@ -791,6 +807,16 @@ function openMeSheet() {
       ${state.backend.mode === 'live' ? '<button id="sign-out" class="danger-text">Skrá fjölskylduaðgang út úr þessum síma</button>' : ''}
     </div>`);
 
+  s.el.querySelector('#photo-input').addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    s.close();
+    openPhotoEditor(file);
+  });
+  s.el.querySelector('#remove-photo')?.addEventListener('click', async () => {
+    s.close();
+    await savePhoto(null);
+  });
   s.el.querySelector('#switch-user').addEventListener('click', () => {
     s.close(); store.set(ME_KEY, null); state.me = null; state.tab = 'home'; renderPicker();
   });
@@ -809,6 +835,89 @@ function openMeSheet() {
   s.el.querySelector('#sign-out')?.addEventListener('click', async () => {
     await state.backend.signOut(); store.set(ME_KEY, null); location.reload();
   });
+}
+
+// ------------------------------------------------------------------
+// Prófílmynd: velja úr myndasafni, færa og stækka í hringnum, vista litla
+// ------------------------------------------------------------------
+function openPhotoEditor(file) {
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onerror = () => { URL.revokeObjectURL(url); toast('Gat ekki opnað myndina'); };
+  img.onload = () => {
+    const SIZE = 600;
+    let zoom = 1, ox = 0, oy = 0;
+    const s = openSheet(`
+      <h2>Stilltu myndina</h2>
+      <p class="muted">Dragðu til að færa · notaðu sleðann til að stækka</p>
+      <div class="crop" style="--c:${esc(state.me.color)}"><canvas width="${SIZE}" height="${SIZE}"></canvas></div>
+      <label class="zoom"><span>－</span><input type="range" min="1" max="4" step="0.01" value="1" aria-label="Stækka"><span>＋</span></label>
+      <div class="sheet-actions">
+        <button class="btn primary" id="photo-save">Vista mynd</button>
+        <button class="btn" data-close>Hætta við</button>
+      </div>`);
+    const canvas = s.el.querySelector('canvas');
+    const ctx = canvas.getContext('2d');
+    const base = Math.max(SIZE / img.width, SIZE / img.height);
+
+    const clamp = () => {
+      const dw = img.width * base * zoom, dh = img.height * base * zoom;
+      const mx = (dw - SIZE) / 2, my = (dh - SIZE) / 2;
+      ox = Math.max(-mx, Math.min(mx, ox));
+      oy = Math.max(-my, Math.min(my, oy));
+    };
+    const draw = () => {
+      clamp();
+      const sc = base * zoom, dw = img.width * sc, dh = img.height * sc;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, SIZE, SIZE);
+      ctx.drawImage(img, (SIZE - dw) / 2 + ox, (SIZE - dh) / 2 + oy, dw, dh);
+    };
+    draw();
+
+    s.el.querySelector('input[type=range]').addEventListener('input', (e) => { zoom = Number(e.target.value); draw(); });
+
+    let drag = null;
+    canvas.addEventListener('pointerdown', (e) => {
+      drag = { x: e.clientX, y: e.clientY, ox, oy };
+      canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const k = SIZE / canvas.getBoundingClientRect().width;
+      ox = drag.ox + (e.clientX - drag.x) * k;
+      oy = drag.oy + (e.clientY - drag.y) * k;
+      draw();
+    });
+    const end = () => { drag = null; };
+    canvas.addEventListener('pointerup', end);
+    canvas.addEventListener('pointercancel', end);
+
+    s.el.querySelector('#photo-save').addEventListener('click', async () => {
+      const out = document.createElement('canvas');
+      out.width = out.height = 256;
+      out.getContext('2d').drawImage(canvas, 0, 0, SIZE, SIZE, 0, 0, 256, 256);
+      const data = out.toDataURL('image/jpeg', 0.82);
+      URL.revokeObjectURL(url);
+      s.close();
+      await savePhoto(data);
+    });
+  };
+  img.src = url;
+}
+
+async function savePhoto(photo) {
+  try {
+    await state.backend.setPhoto(state.me.id, photo);
+    state.me.photo = photo;
+    const p = profileById(state.me.id);
+    if (p) p.photo = photo;
+    renderShell(); renderView();
+    toast(photo ? 'Ný mynd komin 📸' : 'Emoji-ið er komið aftur');
+  } catch (e) {
+    console.error(e);
+    toast(e.code === 'no_column' ? 'Það þarf að uppfæra gagnagrunninn fyrst (2-myndir.sql)' : 'Gat ekki vistað myndina — athugaðu netið');
+  }
 }
 
 // ==================================================================
