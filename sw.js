@@ -1,7 +1,7 @@
 // Service worker: geymir sjálft appið svo það opnist hratt.
 // Gögnin (Supabase) eru alltaf sótt beint og aldrei geymd hér.
 // Hækkaðu VERSION þegar ný útgáfa er sett út.
-const VERSION = 'fv-v12';
+const VERSION = 'fv-v13';
 const SHELL = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
   'js/app.js', 'js/data.js', 'js/util.js', 'js/config.js',

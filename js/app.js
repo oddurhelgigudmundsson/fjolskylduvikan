@@ -1,7 +1,7 @@
 import { createBackend } from './data.js';
 import { CALENDAR_FUNCTION } from './config.js';
 
-const APP_VERSION = 'fv-v12';
+const APP_VERSION = 'fv-v13';
 import {
   DAYS, DAYS_SHORT, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -987,9 +987,11 @@ function remSummary(r) {
 
 function remindersCard() {
   const today = todayIso();
-  const mine = state.reminders
-    .filter((r) => (!r.to_id || r.to_id === state.me.id) && remOn(r, today))
-    .sort((a, b) => (remIsDone(a) - remIsDone(b)) || (remTime(a) || '00').localeCompare(remTime(b) || '00'));
+  // Áminningar sem búið er að haka við hverfa (endurteknar koma aftur næst)
+  const todays = state.reminders.filter((r) => (!r.to_id || r.to_id === state.me.id) && remOn(r, today));
+  const mine = todays
+    .filter((r) => !remIsDone(r))
+    .sort((a, b) => (remTime(a) || '00').localeCompare(remTime(b) || '00'));
   return `
     <section class="card reminders">
       <div class="card-head">
@@ -1004,7 +1006,7 @@ function remindersCard() {
             <span class="rem-text"><span class="rem-body">${esc(r.body)}</span>
               ${remTime(r) || !r.to_id ? `<span class="muted small">${remTime(r) ? 'kl. ' + esc(remTime(r)) : ''}${remTime(r) && !r.to_id ? ' · ' : ''}${!r.to_id ? 'öll fjölskyldan' : ''}</span>` : ''}</span>
           </button></li>`;
-      }).join('')}</ul>` : '<p class="muted">Engar áminningar í dag.</p>'}
+      }).join('')}</ul>` : `<p class="muted rem-empty">${todays.length ? 'Allt búið í dag ✅' : 'Engar áminningar í dag.'}</p>`}
       <button class="btn add-rem" id="rem-add">＋ Ný áminning</button>
     </section>`;
 }
@@ -1013,6 +1015,10 @@ async function toggleRemDone(id) {
   const key = id + '|' + state.me.id;
   const done = !state.remDone.has(key);
   if (done) state.remDone.add(key); else state.remDone.delete(key);
+  if (done) {
+    const li = document.querySelector(`[data-rem-done="${CSS.escape(id)}"]`)?.closest('li');
+    if (li) { li.classList.add('done', 'leaving'); await new Promise((r) => setTimeout(r, 350)); }
+  }
   renderView();
   try { await state.backend.setDone(id, todayIso(), state.me.id, done); }
   catch { toast('Gat ekki vistað — athugaðu netið'); await loadReminders(); renderView(); }

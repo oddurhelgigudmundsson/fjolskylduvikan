@@ -62,7 +62,7 @@ Oddur and Kristín see a **＋** next to their avatar on the home screen. From t
 - iPhone: needs iOS 16.4 or newer, and the app must be opened from the home screen. Each person taps "Kveikja á tilkynningum" once.
 
 ## Reminders (Áminningar)
-A fixed "📌 Áminningar" card sits at the top of everyone's home screen and shows today's reminders for that person (plus family-wide ones). Each person ticks a reminder off as done for the day.
+A fixed "📌 Áminningar" card sits at the top of everyone's home screen and shows today's reminders for that person (plus family-wide ones). Ticking a reminder off removes it from the home screen for the day; repeating ones come back on their next day.
 
 - Anyone can add reminders for themselves. Oddur and Kristín can also add them for a child or for the whole family.
 - A reminder repeats on chosen weekdays (every day, weekdays, weekends, or specific days), or happens once on a given date.
