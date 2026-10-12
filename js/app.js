@@ -3,7 +3,7 @@ import { icon } from './icons.js';
 import { jokeOfTheDay } from './jokes.js';
 import { CALENDAR_FUNCTION } from './config.js';
 
-const APP_VERSION = 'fv-v24';
+const APP_VERSION = 'fv-v25';
 import {
   DAYS, DAYS_SHORT, MONTHS, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -1468,10 +1468,10 @@ function choreRow(c, kidId, { compact = false } = {}) {
   const other = !log && takenBy(c);
   const otherName = other ? firstName(profileById(other.profile_id)?.name || '') : '';
   let right;
-  if (log?.status === 'approved') right = `<span class="pts got">+${log.points} ${icon('star')}</span>`;
+  if (log?.status === 'approved') right = `<span class="pts got">+${log.points} ${icon('star', 'fill')}</span>`;
   else if (log) right = `<span class="pts wait">${icon('clock')} Bíður</span>`;
   else if (other) right = `<span class="muted small">${esc(otherName)} tók það</span>`;
-  else right = `<span class="pts">${c.points} ${icon('star')}</span>`;
+  else right = `<span class="pts">${c.points} ${icon('star', 'fill')}</span>`;
   const canUndo = log && !log.approved_by;
   const clickable = (!log && !other) || canUndo;
   return `
@@ -1500,7 +1500,7 @@ function laterThisWeek(kidId) {
       <div class="card-label">${icon('calendar-days')} Seinna í vikunni</div>
       <ul class="later-list">${rows.map(({ d, list }) => `
         <li><span class="later-day">${esc(DAYS_SHORT[d.getDay()])}</span>
-          <span class="later-chores">${list.map((c) => `<span>${esc(c.emoji)} ${esc(c.title)} <span class="muted small">${c.points} ${icon('star')}</span></span>`).join('')}</span></li>`).join('')}
+          <span class="later-chores">${list.map((c) => `<span>${esc(c.emoji)} ${esc(c.title)} <span class="muted small">${c.points} ${icon('star', 'fill')}</span></span>`).join('')}</span></li>`).join('')}
       </ul>
       <p class="muted small">Verk sem eru alla daga eru ekki talin upp hér.</p>
     </section>`;
@@ -1523,7 +1523,7 @@ function myChoresCard() {
         : `<p class="muted">${list.length ? 'Öll verkin búin í dag!' : 'Engin verk í dag.'}</p>`}
       <div class="my-score">
         ${trophyHolders().ids.includes(state.me.id) ? `<span class="trophy-line">${icon('trophy')} Þú ert með bikarinn!</span>` : ''}
-        <span><strong>${t.points}</strong> ${icon('star')} í vikunni</span>
+        <span><strong>${t.points}</strong> ${icon('star', 'fill')} í vikunni</span>
       </div>
     </section>`;
 }
@@ -1622,7 +1622,7 @@ function renderChores(view) {
           <span class="rank r${r.points ? rankIn(rows, r.points) : 0}">${r.points ? rankIn(rows, r.points) : '–'}</span>
           ${withTrophy(r.kid, '')}
           <span class="board-name">${esc(firstName(r.kid.name))}</span>
-          <span class="board-pts"><strong>${r.points}</strong> ${icon('star')}${r.pending ? `<span class="muted small"> +${r.pending} bíða</span>` : ''}</span>
+          <span class="board-pts"><strong>${r.points}</strong> ${icon('star', 'fill')}${r.pending ? `<span class="muted small"> +${r.pending} bíða</span>` : ''}</span>
         </li>`).join('')}</ol>
       <p class="muted small board-foot">${holders.ids.length
         ? `${icon('trophy')} Bikarinn: ${esc(holderNames.join(' og '))} (${holders.points} stig síðustu viku)`
@@ -1670,7 +1670,7 @@ function renderChores(view) {
     const t = weekTotals(mon)[state.me.id] || { points: 0, pending: 0 };
     myPoints = `
       <section class="card board my-points">
-        <div class="card-label">${icon('star')} Stigin mín í vikunni</div>
+        <div class="card-label">${icon('star', 'fill')} Stigin mín í vikunni</div>
         <div class="big-points">${t.points}<span> stig</span></div>
         ${t.pending ? `<p class="muted small">+${t.pending} bíða samþykkis</p>` : ''}
         ${holders.ids.includes(state.me.id) ? `<p class="trophy-line">${icon('trophy')} Þú ert með bikarinn!</p>` : ''}
@@ -1703,7 +1703,7 @@ function openChoreList() {
     <ul class="rem-all">${state.chores.map((c) => {
       const who = (c.to_ids || []).length ? c.to_ids.map((id) => firstName(profileById(id)?.name || '')).join(', ') : 'Öll börnin';
       return `<li><button data-edit-chore="${esc(c.id)}">
-        <span class="rem-body">${esc(c.emoji)} ${esc(c.title)} <span class="pts">${c.points} ${icon('star')}</span></span>
+        <span class="rem-body">${esc(c.emoji)} ${esc(c.title)} <span class="pts">${c.points} ${icon('star', 'fill')}</span></span>
         <span class="muted small">${esc(daysSummary(c.repeat_days))} · ${esc(who)} · ${c.mode === 'anyone' ? 'fyrstur fær' : 'hver og einn'}${c.needs_approval ? ' · samþykki' : ''}</span>
       </button></li>`;
     }).join('')}</ul>
@@ -1731,7 +1731,7 @@ function openChoreEditor(existing) {
       <label class="field"><span>Verk</span><input id="ch-title" maxlength="60" value="${esc(c.title || '')}" placeholder="t.d. Vökva blómin"></label>
     </div>
     <div class="card-label">Stig</div>
-    <div class="chips" id="ch-points">${POINTS.map((p) => `<button class="chip pick-chip ${p === points ? 'on' : ''}" data-points="${p}">${p} ${icon('star')}</button>`).join('')}</div>
+    <div class="chips" id="ch-points">${POINTS.map((p) => `<button class="chip pick-chip ${p === points ? 'on' : ''}" data-points="${p}">${p} ${icon('star', 'fill')}</button>`).join('')}</div>
     <div class="card-label">Hver gerir það?</div>
     <div class="segmented">
       <button data-mode="each" class="${mode === 'each' ? 'on' : ''}">Hver og einn</button>

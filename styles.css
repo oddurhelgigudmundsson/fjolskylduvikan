@@ -681,7 +681,7 @@ input, textarea, .segmented, .segmented button, .filter, .day-chip,
 .menu-list > button .i, .menu-file .i, .menu-note .i { width: 18px; height: 18px; color: var(--muted); }
 .back { display: inline-flex; align-items: center; gap: 2px; }
 .pts .i, .board-pts .i, .my-score .i, .later-chores .i, .pick-chip .i { width: 13px; height: 13px; vertical-align: -.12em; }
-.pts .i, .board-pts .i, .my-score .i, .pick-chip .i { fill: currentColor; }
+.i.fill { fill: currentColor; }
 .board-pts .i, .my-score .i { color: var(--c-yellow-t); }
 .star-on { fill: var(--c-yellow-t); color: var(--c-yellow-t); }
 .react-count .i { width: 12px; height: 12px; fill: currentColor; }
