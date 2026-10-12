@@ -15,6 +15,10 @@ const state = {
   items: [],
   meals: {},                       // { 'YYYY-MM-DD': meal }
   weekStart: startOfWeek(new Date()),
+  events: [],
+  calStatus: 'idle',               // idle | loading | ok | error | not_setup
+  calFailed: [],
+  calFilter: 'allir',
   unsub: [],
 };
 
@@ -56,9 +60,11 @@ async function startProfiles() {
 }
 
 async function startMain() {
+  state.calFilter = store.get('fv.calfilter') || 'allir';
   renderShell();
   await Promise.all([loadItems(), loadMeals()]);
   renderView();
+  loadEvents().then(() => refreshIf(['home', 'cal']));
 
   state.unsub.forEach((u) => u());
   state.unsub = [
@@ -72,6 +78,8 @@ document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible' || !state.me) return;
   await Promise.all([loadItems(), loadMeals()]);
   renderView();
+  await loadEvents();
+  refreshIf(['home', 'cal']);
 });
 
 async function loadItems() {
@@ -87,6 +95,75 @@ async function loadMeals() {
     for (let d = new Date(from); d <= to; d = addDays(d, 1)) delete state.meals[iso(d)];
     rows.forEach((m) => { state.meals[m.day] = m; });
   } catch (e) { console.error(e); }
+}
+
+// Dagatal: sótt frá Google í gegnum Supabase. Síðasta svar geymt í tækinu
+// svo dagatalið birtist strax og líka án nets.
+const CAL_KEY = 'fv.cal';
+function calRange() {
+  const thisWeek = startOfWeek(new Date());
+  const from = new Date(Math.min(thisWeek, state.weekStart));
+  const to = addDays(new Date(Math.max(thisWeek, state.weekStart)), 6);
+  return [iso(from), iso(to)];
+}
+
+async function loadEvents() {
+  const [from, to] = calRange();
+  const key = from + '|' + to;
+  if (state.calKey !== key) {
+    try {
+      const cached = JSON.parse(store.get(CAL_KEY) || 'null');
+      if (cached?.key === key) { state.events = cached.events; state.calStatus = 'ok'; }
+      else { state.events = []; state.calStatus = 'loading'; }
+    } catch { state.calStatus = 'loading'; }
+    state.calKey = key;
+  }
+  try {
+    const res = await state.backend.listEvents(from, to);
+    if (state.calKey !== key) return;          // vika breyttist á meðan
+    state.events = res.events || [];
+    state.calFailed = res.failed || [];
+    state.calStatus = 'ok';
+    store.set(CAL_KEY, JSON.stringify({ key, events: state.events }));
+  } catch (e) {
+    console.error(e);
+    if (state.calKey !== key) return;
+    if (e.code === 'not_setup' || e.code === 'no_calendars') state.calStatus = 'not_setup';
+    else if (state.calStatus !== 'ok') state.calStatus = 'error';
+  }
+}
+
+function eventsOn(dayIso, filter = 'allir') {
+  return state.events.filter((e) => {
+    const onDay = e.allDay ? e.start <= dayIso && dayIso < e.end : iso(new Date(e.start)) === dayIso;
+    if (!onDay) return false;
+    return filter === 'allir' || e.people.includes(filter) || e.people.includes('allir');
+  }).sort((a, b) => (b.allDay - a.allDay) || a.start.localeCompare(b.start));
+}
+
+const hhmm = (s) => { const d = new Date(s); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+const eventTime = (e) => (e.allDay ? 'Allan daginn' : hhmm(e.start));
+
+function eventPeople(e) {
+  if (e.people.includes('allir')) return '<span class="who-all" title="Allir">👨‍👩‍👧‍👦</span>';
+  return e.people.map((id) => avatar(profileById(id), 'sm')).join('');
+}
+
+function eventRow(e) {
+  const main = profileById(e.people[0]);
+  const color = e.people.includes('allir') || !main ? 'var(--accent)' : main.color;
+  return `
+    <li><button class="event" data-event="${esc(e.id)}" style="--c:${esc(color)}">
+      <span class="ev-time">${esc(eventTime(e))}</span>
+      <span class="ev-body"><span class="ev-title">${esc(e.title)}</span>
+        ${e.location ? `<span class="ev-loc muted">${esc(e.location)}</span>` : ''}</span>
+      <span class="ev-who">${eventPeople(e)}</span>
+    </button></li>`;
+}
+
+function bindEvents(root) {
+  root.querySelectorAll('[data-event]').forEach((b) =>
+    b.addEventListener('click', () => openEventSheet(state.events.find((e) => e.id === b.dataset.event))));
 }
 
 function refreshIf(tabs) { if (tabs.includes(state.tab)) renderView(); }
@@ -250,10 +327,12 @@ function demoNote() {
 const ICONS = {
   home: '<svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>',
   shop: '<svg viewBox="0 0 24 24"><path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h9.2a1 1 0 0 0 1-.8L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/></svg>',
+  cal: '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
   menu: '<svg viewBox="0 0 24 24"><path d="M7 3v8m-3-8v5a3 3 0 0 0 6 0V3M7 11v10M17 21V3c-2.2 0-4 2.7-4 7s1.8 4 4 4"/></svg>',
 };
 const TABS = [
   { id: 'home', label: 'Heim' },
+  { id: 'cal', label: 'Dagatal' },
   { id: 'shop', label: 'Innkaup' },
   { id: 'menu', label: 'Matseðill' },
 ];
@@ -286,7 +365,7 @@ function go(tab) {
 function renderView() {
   const view = document.getElementById('view');
   if (!view) return;
-  ({ home: renderHome, shop: renderShop, menu: renderMenu }[state.tab])(view);
+  ({ home: renderHome, cal: renderCal, shop: renderShop, menu: renderMenu }[state.tab])(view);
   const open = state.items.filter((i) => !i.checked).length;
   const badge = app.querySelector('[data-badge="shop"]');
   if (badge) badge.textContent = open ? String(open) : '';
@@ -308,6 +387,8 @@ function renderHome(view) {
       <p class="eyebrow">${esc(longDate(now))}</p>
       <h1>${greet}, ${esc(firstName(state.me.name))} ${esc(state.me.emoji)}</h1>
     </section>
+
+    ${todayCard()}
 
     <button class="card tap tonight" data-go="menu">
       <div class="card-label">🍽️ Í kvöldmatinn</div>
@@ -339,9 +420,29 @@ function renderHome(view) {
       </ul>
     </section>` : ''}
 
-    <p class="coming">Dagatal, heimilisverk og tilkynningar koma í næstu útgáfu ✨</p>`;
+    <p class="coming">Heimilisverk og tilkynningar koma í næstu útgáfu ✨</p>`;
 
   view.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
+  bindEvents(view);
+}
+
+function todayCard() {
+  const today = eventsOn(todayIso());
+  let body;
+  if (state.calStatus === 'loading') body = '<p class="muted">Sæki dagatalið…</p>';
+  else if (state.calStatus === 'not_setup') body = '<p class="muted">Dagatalið er ekki tengt ennþá.</p>';
+  else if (state.calStatus === 'error' && !today.length) body = '<p class="muted">Náði ekki í dagatalið — reyni aftur þegar netið kemur.</p>';
+  else if (!today.length) body = '<p class="muted">Ekkert á dagskrá í dag 🌿</p>';
+  else body = `<ul class="events compact">${today.slice(0, 6).map(eventRow).join('')}</ul>
+    ${today.length > 6 ? `<p class="muted small">+${today.length - 6} í viðbót</p>` : ''}`;
+  return `
+    <section class="card">
+      <div class="card-head">
+        <div class="card-label">📅 Í dag</div>
+        <button class="link small" data-go="cal">Vikan ›</button>
+      </div>
+      ${body}
+    </section>`;
 }
 
 // ------------------------------------------------------------------
@@ -455,20 +556,11 @@ async function clearDone() {
 // Matseðill vikunnar
 // ------------------------------------------------------------------
 function renderMenu(view) {
-  const monday = state.weekStart;
-  const thisWeek = iso(startOfWeek(new Date())) === iso(monday);
-  const days = [0, 1, 2, 3, 4, 5, 6].map((n) => addDays(monday, n));
+  const days = [0, 1, 2, 3, 4, 5, 6].map((n) => addDays(state.weekStart, n));
 
   view.innerHTML = `
     <section class="hero compact"><h1>Matseðill</h1></section>
-    <div class="week-nav">
-      <button class="icon-btn" id="prev-week" aria-label="Fyrri vika">‹</button>
-      <div class="week-label">
-        <strong>${thisWeek ? 'Þessi vika' : `Vika ${isoWeek(monday)}`}</strong>
-        <span class="muted">${esc(weekRange(monday))}</span>
-      </div>
-      <button class="icon-btn" id="next-week" aria-label="Næsta vika">›</button>
-    </div>
+    ${weekNav()}
     <ul class="menu-days">
       ${days.map((d) => {
         const key = iso(d);
@@ -486,16 +578,111 @@ function renderMenu(view) {
       }).join('')}
     </ul>`;
 
-  view.querySelector('#prev-week').addEventListener('click', () => shiftWeek(-7));
-  view.querySelector('#next-week').addEventListener('click', () => shiftWeek(7));
+  bindWeekNav(view);
   view.querySelectorAll('[data-day]').forEach((b) => b.addEventListener('click', () => openMealSheet(b.dataset.day)));
 }
 
 async function shiftWeek(n) {
   state.weekStart = addDays(state.weekStart, n);
   renderView();
-  await loadMeals();
+  await Promise.all([loadMeals(), loadEvents()]);
   renderView();
+}
+
+function weekNav() {
+  const monday = state.weekStart;
+  const thisWeek = iso(startOfWeek(new Date())) === iso(monday);
+  return `
+    <div class="week-nav">
+      <button class="icon-btn" id="prev-week" aria-label="Fyrri vika">‹</button>
+      <div class="week-label">
+        <strong>${thisWeek ? 'Þessi vika' : `Vika ${isoWeek(monday)}`}</strong>
+        <span class="muted">${esc(weekRange(monday))}</span>
+      </div>
+      <button class="icon-btn" id="next-week" aria-label="Næsta vika">›</button>
+    </div>`;
+}
+
+function bindWeekNav(view) {
+  view.querySelector('#prev-week').addEventListener('click', () => shiftWeek(-7));
+  view.querySelector('#next-week').addEventListener('click', () => shiftWeek(7));
+}
+
+// ------------------------------------------------------------------
+// Dagatal
+// ------------------------------------------------------------------
+function renderCal(view) {
+  const days = [0, 1, 2, 3, 4, 5, 6].map((n) => addDays(state.weekStart, n));
+  const f = state.calFilter;
+  const chip = (id, label, color, icon) => `
+    <button class="filter ${f === id ? 'on' : ''}" data-filter="${esc(id)}" style="--c:${esc(color)}">
+      ${icon}<span>${esc(label)}</span></button>`;
+
+  let body;
+  if (state.calStatus === 'not_setup') {
+    body = `<div class="empty"><div class="empty-mark">🔌</div><p>Dagatalið er ekki tengt ennþá</p>
+      <p class="muted">Það þarf að setja dagatalið upp í Supabase — sjá leiðbeiningarnar.</p></div>`;
+  } else if (state.calStatus === 'loading') {
+    body = '<div class="empty"><div class="empty-mark">📅</div><p class="muted">Sæki dagatalið…</p></div>';
+  } else if (state.calStatus === 'error' && !state.events.length) {
+    body = `<div class="empty"><div class="empty-mark">📡</div><p>Náði ekki í dagatalið</p>
+      <button class="btn" id="cal-retry">Reyna aftur</button></div>`;
+  } else {
+    body = `<div class="cal-days">${days.map((d) => {
+      const key = iso(d);
+      const list = eventsOn(key, f);
+      const today = key === todayIso();
+      return `
+        <section class="cal-day ${today ? 'today' : ''}">
+          <h2 class="cal-day-title">${DAYS[d.getDay()]} <span class="muted">${d.getDate()}.</span>${today ? '<span class="pill accent">Í dag</span>' : ''}</h2>
+          ${list.length ? `<ul class="events">${list.map(eventRow).join('')}</ul>` : '<p class="muted small cal-none">Ekkert á dagskrá</p>'}
+        </section>`;
+    }).join('')}</div>
+    ${state.calFailed.length ? '<p class="muted small">⚠️ Náði ekki í öll dagatölin núna — reyni aftur seinna.</p>' : ''}
+    <p class="coming">Viðburðum er bætt við í Google Calendar. Settu nafnið fremst í titilinn,<br>t.d. „Alma – fimleikar“, þá fer hann á rétta manneskju.</p>`;
+  }
+
+  view.innerHTML = `
+    <section class="hero compact"><h1>Dagatal</h1></section>
+    <div class="filters" role="tablist" aria-label="Sýna dagatal fyrir">
+      ${chip('allir', 'Allir', 'var(--accent)', '<span class="avatar sm" style="--c:var(--accent)">👨‍👩‍👧‍👦</span>')}
+      ${state.profiles.map((p) => chip(p.id, firstName(p.name), p.color, avatar(p, 'sm'))).join('')}
+    </div>
+    ${weekNav()}
+    ${body}`;
+
+  bindWeekNav(view);
+  bindEvents(view);
+  view.querySelectorAll('[data-filter]').forEach((b) => b.addEventListener('click', () => {
+    state.calFilter = b.dataset.filter;
+    store.set('fv.calfilter', state.calFilter);
+    renderView();
+  }));
+  view.querySelector('#cal-retry')?.addEventListener('click', async () => {
+    state.calStatus = 'loading'; renderView(); await loadEvents(); renderView();
+  });
+}
+
+function openEventSheet(e) {
+  if (!e) return;
+  const start = e.allDay ? fromIso(e.start) : new Date(e.start);
+  let when;
+  if (e.allDay) {
+    const last = addDays(fromIso(e.end), -1);
+    when = iso(last) === e.start ? `${longDate(start)} · allan daginn`
+      : `${longDate(start)} – ${longDate(last)}`;
+  } else {
+    when = `${longDate(start)} · ${hhmm(e.start)}–${hhmm(e.end)}`;
+  }
+  const who = e.people.includes('allir')
+    ? '<span class="who-row">👨‍👩‍👧‍👦 Öll fjölskyldan</span>'
+    : e.people.map((id) => { const p = profileById(id); return p ? `<span class="who-row">${avatar(p, 'sm')} ${esc(p.name)}</span>` : ''; }).join('');
+  openSheet(`
+    <h2>${esc(e.title)}</h2>
+    <p class="muted">${esc(when)}</p>
+    ${e.location ? `<p>📍 ${esc(e.location)}</p>` : ''}
+    <div class="who-list">${who}</div>
+    <div class="sheet-actions"><button class="btn" data-close>Loka</button></div>`);
 }
 
 function openMealSheet(day) {

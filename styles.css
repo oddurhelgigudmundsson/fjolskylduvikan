@@ -238,6 +238,40 @@ main { padding: 4px 16px calc(env(safe-area-inset-bottom) + 96px); display: flex
 .ingredients { margin: 0 0 6px; padding-left: 20px; }
 .ingredients li { padding: 2px 0; }
 
+/* ---------- Dagatal ---------- */
+.filters {
+  display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 4px;
+  scrollbar-width: none;
+}
+.filters::-webkit-scrollbar { display: none; }
+.filter {
+  --c: var(--accent); flex: none; display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px 4px 4px; border-radius: 999px; font-size: 14px; font-weight: 600;
+  background: var(--card); box-shadow: var(--shadow); border: 2px solid transparent;
+}
+.filter.on { border-color: var(--c); background: color-mix(in srgb, var(--c) 12%, var(--card)); }
+.cal-days { display: flex; flex-direction: column; gap: 14px; }
+.cal-day-title { font-size: 15px; font-weight: 700; margin: 0 4px 6px; }
+.cal-day.today .cal-day-title { color: var(--accent); }
+.cal-none { margin: 0 4px; }
+.events { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.event {
+  --c: var(--accent); width: 100%; display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px 10px 14px; border-radius: 14px; background: var(--card); box-shadow: var(--shadow);
+  border-left: 5px solid var(--c);
+}
+.event:active { transform: scale(.985); }
+.ev-time { width: 52px; flex: none; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ev-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ev-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-loc { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-who { display: flex; gap: 2px; flex: none; }
+.who-all { font-size: 18px; }
+.events.compact { margin-top: 6px; }
+.events.compact .event { box-shadow: none; background: var(--bg); }
+.who-list { display: flex; flex-direction: column; gap: 8px; }
+.who-row { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+
 /* ---------- Blað neðan frá ---------- */
 .sheet-backdrop {
   position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; justify-content: center;

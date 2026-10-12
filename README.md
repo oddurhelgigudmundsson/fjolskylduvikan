@@ -49,7 +49,11 @@ python3 -m http.server 8000   # then open http://localhost:8000
 ## Releasing an update
 Bump `VERSION` in `sw.js` so phones pick up the new files, then push to `main`.
 
+## Calendar
+The **Dagatal** tab shows the Google calendars "Heimilið" and "Heimilið vol.2", read-only. The Supabase Edge Function `supabase/functions/calendar/index.ts` fetches each calendar's secret iCal address and expands repeating events. It assigns each event to whoever is named in the title (inflected names count: Ölmu, Thelmu, Pétri, Odds). Events with no name go to the whole family (Heimilið) or to Oddur (vol.2). An event that appears in both calendars is shown once.
+
+Setup: in Supabase **Edge Functions → Secrets**, add `ICAL_HEIMILID` and `ICAL_ODDUR` (each calendar's "Secret address in iCal format"). Then deploy the function under the name `calendar` with **Verify JWT** turned off. The function checks the family login itself.
+
 ## Next stages
-1. Calendars: read the "Heimilið" and "Heimilið vol.2" Google calendars and place each event on the right person by the name in its title.
-2. Chores with points, approvals, streaks and a reward shop.
-3. Push notifications from parents to everyone or selected people.
+1. Chores with points, approvals, streaks and a reward shop.
+2. Push notifications from parents to everyone or selected people.

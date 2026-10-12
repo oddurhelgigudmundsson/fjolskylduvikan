@@ -38,6 +38,18 @@ async function supabaseBackend() {
     async saveMeal(meal) { ok(await sb.from('meals').upsert(meal, { onConflict: 'day' })); },
     async deleteMeal(day) { ok(await sb.from('meals').delete().eq('day', day)); },
 
+    // Dagatal: Edge Function "calendar" les Google-dagatölin
+    async listEvents(from, to) {
+      const { data, error } = await sb.functions.invoke('calendar', { body: { from, to } });
+      if (error) {
+        let code = 'error';
+        try { code = (await error.context?.json())?.error || code; } catch { /* ekkert */ }
+        if (error.context?.status === 404) code = 'not_setup';
+        throw Object.assign(new Error('calendar'), { code });
+      }
+      return data;
+    },
+
     subscribe(table, cb) {
       const ch = sb.channel('rt-' + table)
         .on('postgres_changes', { event: '*', schema: 'public', table }, () => cb())
@@ -118,6 +130,10 @@ function demoBackend() {
       commit('meals');
     },
 
+    async listEvents(from, to) {
+      return { events: demoEvents().filter((e) => e.start.slice(0, 10) >= from && e.start.slice(0, 10) <= to), failed: [] };
+    },
+
     subscribe(table, cb) {
       (listeners[table] ||= []).push(cb);
       const onStorage = (e) => { if (e.key === KEY) { memory = null; cb(); } };
@@ -133,6 +149,34 @@ function demoBackend() {
 export function uid() {
   if (globalThis.crypto?.randomUUID) return crypto.randomUUID();
   return 'id-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function demoEvents() {
+  const monday = new Date();
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  const at = (dayN, h, m = 0) => { const d = new Date(monday); d.setDate(d.getDate() + dayN); d.setHours(h, m); return d.toISOString(); };
+  const dateOnly = (dayN) => {
+    const d = new Date(monday); d.setDate(d.getDate() + dayN);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const list = [];
+  const ev = (title, people, start, end, allDay = false, location = null) =>
+    list.push({ id: title + start, uid: title, title, people, start, end, allDay, location });
+  for (let w = -1; w <= 2; w++) {
+    const o = w * 7;
+    ev('Fótboltaæfing Pétur', ['petur'], at(o + 0, 16, 30), at(o + 0, 18), false, 'KR-völlur');
+    ev('Fótboltaæfing Pétur', ['petur'], at(o + 2, 16, 30), at(o + 2, 18), false, 'KR-völlur');
+    ev('Alma – fimleikar', ['alma'], at(o + 1, 17), at(o + 1, 18, 30));
+    ev('Alma – fimleikar', ['alma'], at(o + 3, 17), at(o + 3, 18, 30));
+    ev('Thelma – píanó', ['thelma'], at(o + 2, 15), at(o + 2, 15, 45));
+    ev('Kristín vinnukvöld', ['kristin'], at(o + 3, 19), at(o + 3, 22));
+    ev('Oddur – dómari', ['oddur'], at(o + 5, 13), at(o + 5, 15), false, 'Laugardalsvöllur');
+  }
+  ev('Thelma Tannréttingar', ['thelma'], at(1, 13, 50), at(1, 14, 20));
+  ev('Klilla', ['allir'], at(2, 12), at(2, 13));
+  ev('Sumarbústaður', ['allir'], dateOnly(5), dateOnly(7), true);
+  return list.sort((a, b) => a.start.localeCompare(b.start));
 }
 
 function seed() {
