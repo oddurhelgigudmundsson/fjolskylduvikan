@@ -661,3 +661,47 @@ input, textarea, .segmented, .segmented button, .filter, .day-chip,
 }
 .sheet { border-radius: 4px 4px 0 0; }
 .box { border-radius: 2px; }
+
+/* =====================================================================
+   Tákn: Lucide línutákn (js/icons.js)
+   ===================================================================== */
+.i { width: 1.15em; height: 1.15em; flex: none; vertical-align: -.2em; }
+.card-label { display: flex; align-items: center; gap: 6px; }
+.card-label .i { width: 15px; height: 15px; color: var(--muted); }
+.btn .i { width: 18px; height: 18px; }
+.btn.small-btn .i { width: 15px; height: 15px; }
+.send-btn .i, .add-form .btn .i { width: 20px; height: 20px; stroke-width: 2.25; }
+.icon-btn .i { width: 20px; height: 20px; }
+.round-btn .i { width: 18px; height: 18px; stroke-width: 2.5; }
+.del .i, .notice-close .i { width: 16px; height: 16px; }
+.box .i { width: 14px; height: 14px; stroke-width: 3; color: #fff; }
+.tabbar .i { width: 24px; height: 24px; vertical-align: 0; }
+.subnav button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.subnav .i { width: 16px; height: 16px; }
+.menu-list > button .i, .menu-file .i, .menu-note .i { width: 18px; height: 18px; color: var(--muted); }
+.back { display: inline-flex; align-items: center; gap: 2px; }
+.pts .i, .board-pts .i, .my-score .i, .later-chores .i, .pick-chip .i { width: 13px; height: 13px; vertical-align: -.12em; }
+.pts .i, .board-pts .i, .my-score .i, .pick-chip .i { fill: currentColor; }
+.board-pts .i, .my-score .i { color: var(--c-yellow-t); }
+.star-on { fill: var(--c-yellow-t); color: var(--c-yellow-t); }
+.react-count .i { width: 12px; height: 12px; fill: currentColor; }
+.wish-actions .link .i { width: 13px; height: 13px; }
+.claimed { display: inline-flex; align-items: center; gap: 5px; }
+.claimed .i { width: 14px; height: 14px; }
+.trophy-line, .board-foot { display: inline-flex; align-items: center; gap: 6px; }
+.trophy-line .i, .board-foot .i { width: 16px; height: 16px; color: var(--c-yellow-t); }
+.who-row .avatar.fam, .avatar.fam { color: var(--accent); }
+.avatar.fam .i { width: 60%; height: 60%; vertical-align: 0; }
+.who-all { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--fill); color: var(--muted); }
+.who-all .i { width: 15px; height: 15px; vertical-align: 0; }
+.brand-mark { display: grid; place-items: center; width: 72px; height: 72px; border-radius: 4px; background: var(--fill); color: var(--ink); }
+.brand-mark .i { width: 36px; height: 36px; }
+.empty-mark { display: grid; place-items: center; width: 56px; height: 56px; margin: 0 auto 10px; border-radius: 4px; background: var(--fill); color: var(--muted); }
+.empty-mark .i { width: 26px; height: 26px; }
+.trophy-badge { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #F5C542; color: #6B4E00; right: -5px; bottom: -3px; box-shadow: 0 0 0 2px var(--card); filter: none; }
+.trophy-badge .i { width: 11px; height: 11px; stroke-width: 2.25; vertical-align: 0; }
+.rank { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; font-size: 13px; font-weight: 700; background: var(--fill); color: var(--muted); flex: none; }
+.rank.r1 { background: #F5C542; color: #6B4E00; }
+.rank.r2 { background: #D9DDE3; color: #4A5260; }
+.rank.r3 { background: #E8B98F; color: #6A3F1B; }
+.event .muted .i, p .i { width: 1em; height: 1em; }

@@ -1,7 +1,8 @@
 import { createBackend } from './data.js';
+import { icon } from './icons.js';
 import { CALENDAR_FUNCTION } from './config.js';
 
-const APP_VERSION = 'fv-v21';
+const APP_VERSION = 'fv-v22';
 import {
   DAYS, DAYS_SHORT, MONTHS, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -187,7 +188,7 @@ const hhmm = (s) => { const d = new Date(s); return `${String(d.getHours()).padS
 const eventTime = (e) => (e.allDay ? 'Allan daginn' : hhmm(e.start));
 
 function eventPeople(e) {
-  if (e.people.includes('allir')) return '<span class="who-all" title="Allir">👨‍👩‍👧‍👦</span>';
+  if (e.people.includes('allir')) return `<span class="who-all" title="Allir">${icon('users')}</span>`;
   return e.people.map((id) => avatar(profileById(id), 'sm')).join('');
 }
 
@@ -216,7 +217,7 @@ function refreshIf(tabs) { if (tabs.includes(state.tab)) renderView(); }
 function renderLogin(message = '') {
   app.innerHTML = `
     <section class="center-screen">
-      <div class="brand-mark">🏠</div>
+      <div class="brand-mark">${icon('house')}</div>
       <h1>Fjölskylduvikan</h1>
       <p class="muted">Skráðu fjölskylduaðganginn inn. Þetta þarf bara að gera einu sinni í hverjum síma.</p>
       <form class="stack" id="login">
@@ -245,7 +246,7 @@ function renderLogin(message = '') {
 function renderError(msg) {
   app.innerHTML = `
     <section class="center-screen">
-      <div class="brand-mark">😕</div>
+      <div class="brand-mark">${icon('wifi-off')}</div>
       <h1>Úbbs</h1>
       <p class="muted">${esc(msg)}</p>
       <button class="btn primary" onclick="location.reload()">Reyna aftur</button>
@@ -262,6 +263,8 @@ function avatar(p, size = '') {
   }
   return `<span class="avatar ${size}" style="--c:${esc(p.color)}" aria-hidden="true">${esc(p.emoji)}</span>`;
 }
+
+const famAv = (size = 'sm') => `<span class="avatar ${size} fam" style="--c:var(--accent)">${icon('users')}</span>`;
 
 function renderPicker() {
   app.innerHTML = `
@@ -308,7 +311,7 @@ function renderPin(profile, { change = false, onDone } = {}) {
   function draw(shake = false) {
     app.innerHTML = `
       <section class="center-screen pin-screen">
-        <button class="link back" id="pin-back">‹ Til baka</button>
+        <button class="link back" id="pin-back">${icon('chevron-left')} Til baka</button>
         ${avatar(profile, 'xl')}
         <h1>${esc(title())}</h1>
         <p class="muted">${esc(sub())}</p>
@@ -369,21 +372,14 @@ function demoNote() {
 // ==================================================================
 // Aðalskjár
 // ==================================================================
-const ICONS = {
-  home: '<svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>',
-  shop: '<svg viewBox="0 0 24 24"><path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h9.2a1 1 0 0 0 1-.8L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/></svg>',
-  chores: '<svg viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4"/></svg>',
-  food: '<svg viewBox="0 0 24 24"><path d="M7 3v8m-3-8v5a3 3 0 0 0 6 0V3M7 11v10M17 21V3c-2.2 0-4 2.7-4 7s1.8 4 4 4"/></svg>',
-  saman: '<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>',
-  cal: '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
-  menu: '<svg viewBox="0 0 24 24"><path d="M7 3v8m-3-8v5a3 3 0 0 0 6 0V3M7 11v10M17 21V3c-2.2 0-4 2.7-4 7s1.8 4 4 4"/></svg>',
-};
+const ICONS = { home: icon('house'), cal: icon('calendar'), chores: icon('trophy'), food: icon('utensils'), saman: icon('heart') };
+
 const TABS = [
   { id: 'home', label: 'Heim' },
   { id: 'cal', label: 'Dagatal' },
   { id: 'chores', label: 'Verk' },
-  { id: 'food', label: 'Matur', subs: [['shop', '🛒 Innkaup'], ['menu', '🍽️ Matseðill']] },
-  { id: 'saman', label: 'Saman', subs: [['photos', '📸 Myndir'], ['kudos', '💛 Hrós'], ['wishes', '🎁 Óskalistar']] },
+  { id: 'food', label: 'Matur', subs: [['shop', 'Innkaup', 'shopping-cart'], ['menu', 'Matseðill', 'utensils']] },
+  { id: 'saman', label: 'Saman', subs: [['photos', 'Myndir', 'camera'], ['kudos', 'Hrós', 'heart'], ['wishes', 'Óskalistar', 'gift']] },
 ];
 const groupOf = (tab) => (TABS.find((t) => t.id === tab || t.subs?.some(([id]) => id === tab)) || TABS[0]).id;
 const lastSub = {};
@@ -392,8 +388,8 @@ const lastSub = {};
 function subNav(tab) {
   const g = TABS.find((t) => t.id === groupOf(tab));
   if (!g?.subs) return '';
-  return `<div class="segmented subnav">${g.subs.map(([id, label]) =>
-    `<button data-sub="${id}" class="${id === tab ? 'on' : ''}">${label}</button>`).join('')}</div>`;
+  return `<div class="segmented subnav">${g.subs.map(([id, label, ic]) =>
+    `<button data-sub="${id}" class="${id === tab ? 'on' : ''}">${icon(ic)}${label}</button>`).join('')}</div>`;
 }
 function bindSubNav(view) {
   view.querySelectorAll('[data-sub]:not([data-bound])').forEach((b) => {
@@ -407,7 +403,7 @@ function renderShell() {
     <header class="topbar">
       <div class="title">Fjölskylduvikan</div>
       <div class="top-actions">
-        ${isParent() ? `<button class="send-btn ${state.tab === 'home' ? '' : 'hidden'}" id="send-btn" aria-label="Senda tilkynningu">＋</button>` : ''}
+        ${isParent() ? `<button class="send-btn ${state.tab === 'home' ? '' : 'hidden'}" id="send-btn" aria-label="Senda tilkynningu">${icon('plus')}</button>` : ''}
         <button class="me-btn" id="me-btn" aria-label="Notandi: ${esc(state.me.name)}">${avatar(state.me)}</button>
       </div>
     </header>
@@ -470,11 +466,11 @@ function renderHome(view) {
     ${todayCard()}
 
     <button class="card tap tonight" data-go="menu">
-      <div class="card-label">🍽️ Í kvöldmatinn</div>
+      <div class="card-label">${icon('utensils')} Í kvöldmatinn</div>
       ${tonight
         ? `<div class="big-title">${esc(tonight.title)}</div>${tonight.notes ? `<p class="muted">${esc(tonight.notes)}</p>` : ''}`
         : `<div class="big-title muted">Ekkert ákveðið ennþá</div>
-           <p class="muted">${isParent() ? 'Ýttu hér til að skipuleggja vikuna' : 'Mamma og pabbi eru að hugsa málið 🤔'}</p>`}
+           <p class="muted">${isParent() ? 'Ýttu hér til að skipuleggja vikuna' : 'Mamma og pabbi eru að hugsa málið'}</p>`}
     </button>
 
     ${remindersCard()}
@@ -484,12 +480,12 @@ function renderHome(view) {
 
     <button class="card tap" data-go="shop">
       <div class="card-head">
-        <div class="card-label">🛒 Innkaupalisti</div>
+        <div class="card-label">${icon('shopping-cart')} Innkaupalisti</div>
         <span class="pill">${open.length ? `${open.length} eftir` : 'Allt komið'}</span>
       </div>
       ${open.length
         ? `<div class="chips">${open.slice(0, 6).map((i) => `<span class="chip">${esc(i.name)}</span>`).join('')}${open.length > 6 ? `<span class="chip more">+${open.length - 6}</span>` : ''}</div>`
-        : '<p class="muted">Listinn er tómur. Vel gert! 🎉</p>'}
+        : '<p class="muted">Listinn er tómur. Vel gert!</p>'}
     </button>
     `;
 
@@ -519,14 +515,14 @@ function todayCard() {
   else if (state.calStatus === 'not_setup') body = '<p class="muted">Dagatalið er ekki tengt ennþá.</p>';
   else if (state.calStatus === 'error' && !today.length) body = '<p class="muted">Náði ekki í dagatalið — reyni aftur þegar netið kemur.</p>';
   else if (!today.length) body = mine.length
-    ? '<p class="muted">Allt búið í dag ✅</p>'
-    : '<p class="muted">Ekkert á dagskrá í dag 🌿</p>';
+    ? '<p class="muted">Allt búið í dag</p>'
+    : '<p class="muted">Ekkert á dagskrá í dag</p>';
   else body = `<ul class="events compact">${today.slice(0, 6).map(eventRow).join('')}</ul>
     ${today.length > 6 ? `<p class="muted small">+${today.length - 6} í viðbót</p>` : ''}`;
   return `
     <section class="card">
       <div class="card-head">
-        <div class="card-label">📅 Í dag</div>
+        <div class="card-label">${icon('calendar')} Í dag</div>
         <button class="link small" data-go="cal">Vikan ›</button>
       </div>
       ${body}
@@ -542,7 +538,7 @@ function renderShop(view) {
       ${subNav('shop')}
       <form id="add-form" class="add-form" autocomplete="off">
         <input id="add-input" placeholder="Bæta á listann… (t.d. mjólk, egg)" aria-label="Vara" enterkeyhint="done">
-        <button class="btn primary" type="submit" aria-label="Bæta við">＋</button>
+        <button class="btn primary" type="submit" aria-label="Bæta við">${icon('plus')}</button>
       </form>
       <div id="shop-list"></div>`;
     view.querySelector('#add-form').addEventListener('submit', onAddItems);
@@ -582,17 +578,17 @@ function renderShopList(el) {
     return `
       <li class="item ${i.checked ? 'checked' : ''}">
         <button class="check" data-toggle="${esc(i.id)}" aria-label="${i.checked ? 'Taka úr körfu' : 'Komið í körfu'}: ${esc(i.name)}">
-          <span class="box">${i.checked ? '✓' : ''}</span>
+          <span class="box">${i.checked ? icon('check') : ''}</span>
           <span class="name">${esc(i.name)}</span>
         </button>
         <span class="by" title="${esc(who?.name || '')}">${avatar(who, 'sm')}</span>
-        <button class="del" data-del="${esc(i.id)}" aria-label="Eyða ${esc(i.name)}">×</button>
+        <button class="del" data-del="${esc(i.id)}" aria-label="Eyða ${esc(i.name)}">${icon('x')}</button>
       </li>`;
   };
 
   el.innerHTML = `
     ${!open.length && !done.length ? `
-      <div class="empty"><div class="empty-mark">🧺</div><p>Listinn er tómur.</p>
+      <div class="empty"><div class="empty-mark">${icon('shopping-basket')}</div><p>Listinn er tómur.</p>
       <p class="muted">Skrifaðu vöru hér að ofan — allir sjá hana strax.</p></div>` : ''}
     ${groups.map(([cat, list]) => `
       <section class="group">
@@ -660,7 +656,7 @@ function renderMenu(view) {
               <div class="day-name">${DAYS[d.getDay()]} <span class="muted">${d.getDate()}.</span>${today ? '<span class="pill accent">Í dag</span>' : ''}</div>
               ${m
                 ? `<div class="meal-title">${esc(m.title)}</div>${m.notes ? `<p class="muted small">${esc(m.notes)}</p>` : ''}`
-                : `<div class="meal-title muted">${isParent() ? '＋ Bæta við máltíð' : 'Ekkert ákveðið'}</div>`}
+                : `<div class="meal-title muted">${isParent() ? icon('plus') + ' Bæta við máltíð' : 'Ekkert ákveðið'}</div>`}
             </button>
           </li>`;
       }).join('')}
@@ -682,12 +678,12 @@ function weekNav() {
   const thisWeek = iso(startOfWeek(new Date())) === iso(monday);
   return `
     <div class="week-nav">
-      <button class="icon-btn" id="prev-week" aria-label="Fyrri vika">‹</button>
+      <button class="icon-btn" id="prev-week" aria-label="Fyrri vika">${icon('chevron-left')}</button>
       <div class="week-label">
         <strong>${thisWeek ? 'Þessi vika' : `Vika ${isoWeek(monday)}`}</strong>
         <span class="muted">${esc(weekRange(monday))}</span>
       </div>
-      <button class="icon-btn" id="next-week" aria-label="Næsta vika">›</button>
+      <button class="icon-btn" id="next-week" aria-label="Næsta vika">${icon('chevron-right')}</button>
     </div>`;
 }
 
@@ -711,13 +707,13 @@ function renderCal(view) {
     const why = state.calError === 'no_calendars'
       ? 'Fallið fannst, en leynilegu iCal-slóðirnar (ICAL_HEIMILID / ICAL_ODDUR) vantar í Supabase → Edge Functions → Secrets.'
       : `Fann ekki dagatalsfallið „${esc(CALENDAR_FUNCTION)}“ í Supabase → Edge Functions.`;
-    body = `<div class="empty"><div class="empty-mark">🔌</div><p>Dagatalið er ekki tengt ennþá</p>
+    body = `<div class="empty"><div class="empty-mark">${icon('plug')}</div><p>Dagatalið er ekki tengt ennþá</p>
       <p class="muted">${why}</p><button class="btn" id="cal-retry">Reyna aftur</button>
       <p class="muted small">Útgáfa ${APP_VERSION}</p></div>`;
   } else if (state.calStatus === 'loading') {
-    body = '<div class="empty"><div class="empty-mark">📅</div><p class="muted">Sæki dagatalið…</p></div>';
+    body = `<div class="empty"><div class="empty-mark">${icon('calendar')}</div><p class="muted">Sæki dagatalið…</p></div>`;
   } else if (state.calStatus === 'error' && !state.events.length) {
-    body = `<div class="empty"><div class="empty-mark">📡</div><p>Náði ekki í dagatalið</p>
+    body = `<div class="empty"><div class="empty-mark">${icon('wifi-off')}</div><p>Náði ekki í dagatalið</p>
       <button class="btn" id="cal-retry">Reyna aftur</button></div>`;
   } else {
     body = `<div class="cal-days">${days.map((d) => {
@@ -730,14 +726,14 @@ function renderCal(view) {
           ${list.length ? `<ul class="events">${list.map(eventRow).join('')}</ul>` : '<p class="muted small cal-none">Ekkert á dagskrá</p>'}
         </section>`;
     }).join('')}</div>
-    ${state.calFailed.length ? '<p class="muted small">⚠️ Náði ekki í öll dagatölin núna — reyni aftur seinna.</p>' : ''}
+    ${state.calFailed.length ? `<p class="muted small">${icon('wifi-off')} Náði ekki í öll dagatölin núna — reyni aftur seinna.</p>` : ''}
     <p class="coming">Viðburðum er bætt við í Google Calendar. Settu nafnið fremst í titilinn,<br>t.d. „Alma – fimleikar“, þá fer hann á rétta manneskju.</p>`;
   }
 
   view.innerHTML = `
     <section class="hero compact"><h1>Dagatal</h1></section>
     <div class="filters" role="tablist" aria-label="Sýna dagatal fyrir">
-      ${chip('allir', 'Allir', 'var(--accent)', '<span class="avatar sm" style="--c:var(--accent)">👨‍👩‍👧‍👦</span>')}
+      ${chip('allir', 'Allir', 'var(--accent)', famAv())}
       ${state.profiles.map((p) => chip(p.id, firstName(p.name), p.color, avatar(p, 'sm'))).join('')}
     </div>
     ${weekNav()}
@@ -767,12 +763,12 @@ function openEventSheet(e) {
     when = `${longDate(start)} · ${hhmm(e.start)}–${hhmm(e.end)}`;
   }
   const who = e.people.includes('allir')
-    ? '<span class="who-row">👨‍👩‍👧‍👦 Öll fjölskyldan</span>'
+    ? `<span class="who-row">${famAv()} Öll fjölskyldan</span>`
     : e.people.map((id) => { const p = profileById(id); return p ? `<span class="who-row">${avatar(p, 'sm')} ${esc(p.name)}</span>` : ''; }).join('');
   openSheet(`
     <h2>${esc(e.title)}</h2>
     <p class="muted">${esc(when)}</p>
-    ${e.location ? `<p>📍 ${esc(e.location)}</p>` : ''}
+    ${e.location ? `<p>${icon('map-pin')} ${esc(e.location)}</p>` : ''}
     <div class="who-list">${who}</div>
     <div class="sheet-actions"><button class="btn" data-close>Loka</button></div>`);
 }
@@ -790,7 +786,7 @@ function openMealSheet(day) {
       ${m.notes ? `<p>${esc(m.notes)}</p>` : ''}
       ${ingredientList(m)}
       <div class="sheet-actions">
-        ${m.ingredients?.length ? '<button class="btn primary" id="to-list">🛒 Setja hráefni á listann</button>' : ''}
+        ${m.ingredients?.length ? `<button class="btn primary" id="to-list">${icon('shopping-cart')} Setja hráefni á listann</button>` : ''}
         <button class="btn" data-close>Loka</button>
       </div>`);
     s.el.querySelector('#to-list')?.addEventListener('click', async () => { await addIngredients(m.ingredients); s.close(); });
@@ -853,7 +849,7 @@ async function addIngredients(list) {
   const have = new Set(state.items.filter((i) => !i.checked).map((i) => i.name.toLowerCase()));
   const rows = list.filter((n) => !have.has(n.toLowerCase()))
     .map((name) => ({ name, category: categorize(name), added_by: state.me.id }));
-  if (!rows.length) return toast('Allt er nú þegar á listanum 👍');
+  if (!rows.length) return toast('Allt er nú þegar á listanum');
   try {
     await state.backend.addItems(rows);
     await loadItems(); renderView();
@@ -871,16 +867,16 @@ function openMeSheet() {
     <div class="me-head">${avatar(state.me, 'lg')}<div><h2>${esc(state.me.name)}</h2>
       <p class="muted">${isParent() ? 'Foreldri' : 'Fjölskyldumeðlimur'}</p></div></div>
     <div class="menu-list">
-      <label class="menu-file">📷 ${state.me.photo ? 'Skipta um mynd' : 'Setja inn mynd af mér'}
+      <label class="menu-file">${icon('camera')} ${state.me.photo ? 'Skipta um mynd' : 'Setja inn mynd af mér'}
         <input type="file" accept="image/*" id="photo-input" hidden></label>
-      ${state.me.photo ? '<button id="remove-photo">↩️ Nota emoji í staðinn</button>' : ''}
-      <button id="switch-user">🔄 Skipta um notanda</button>
+      ${state.me.photo ? `<button id="remove-photo">${icon('undo-2')} Nota emoji í staðinn</button>` : ''}
+      <button id="switch-user">${icon('refresh-cw')} Skipta um notanda</button>
       ${pushMenuRow()}
-      <button id="change-pin">🔢 Breyta PIN-inu mínu</button>
+      <button id="change-pin">${icon('key-round')} Breyta PIN-inu mínu</button>
       ${isParent() && others.length ? `
         <div class="card-label">Gleymt PIN? Endurstilla fyrir:</div>
         ${others.map((p) => `<button data-reset="${esc(p.id)}">${avatar(p, 'sm')} ${esc(p.name)}</button>`).join('')}` : ''}
-      ${state.backend.mode === 'live' ? '<button id="sign-out" class="danger-text">Skrá fjölskylduaðgang út úr þessum síma</button>' : ''}
+      ${state.backend.mode === 'live' ? `<button id="sign-out" class="danger-text">${icon('log-out')} Skrá fjölskylduaðgang út úr þessum síma</button>` : ''}
     </div>`);
 
   s.el.querySelector('#photo-input').addEventListener('change', (e) => {
@@ -1037,14 +1033,14 @@ function photosHomeCard() {
   return `
     <section class="card photos-card">
       <div class="card-head">
-        <div class="card-label">📸 Myndir dagsins</div>
+        <div class="card-label">${icon('camera')} Myndir dagsins</div>
         <button class="link small" data-go="photos">Árið okkar ›</button>
       </div>
       ${today.length ? `<div class="photo-strip">${today.map((p) => `
         <button class="thumb" data-photo="${esc(p.id)}" aria-label="Mynd frá ${esc(profileById(p.profile_id)?.name || '')}">
           <img src="${esc(photoSrc(p))}" alt="" loading="lazy">${avatar(profileById(p.profile_id), 'sm')}
         </button>`).join('')}</div>` : '<p class="muted">Engin mynd komin í dag.</p>'}
-      ${mine ? '' : '<button class="btn add-rem" id="photo-add">📷 Taka mynd dagsins</button>'}
+      ${mine ? '' : `<button class="btn add-rem" id="photo-add">${icon('camera')} Taka mynd dagsins</button>`}
     </section>`;
 }
 
@@ -1106,19 +1102,19 @@ async function shrinkPhoto(file, max = 1440) {
 
 function openPhotoPicker() {
   const s = openSheet(`
-    <h2>📸 Mynd dagsins</h2>
+    <h2>Mynd dagsins</h2>
     <p class="muted">${myPhotoToday() ? 'Þú ert búin/n að setja mynd í dag — ný mynd kemur í staðinn.' : 'Ein mynd á mann á dag. Myndin þarf að vera tekin í dag.'}</p>
-    <label class="btn primary big file-btn">📷 Taka mynd<input type="file" accept="image/*" capture="environment" id="pick-camera" hidden></label>
-    <label class="btn big file-btn">🖼️ Velja mynd frá í dag<input type="file" accept="image/jpeg,image/*" id="pick-library" hidden></label>
+    <label class="btn primary big file-btn">${icon('camera')} Taka mynd<input type="file" accept="image/*" capture="environment" id="pick-camera" hidden></label>
+    <label class="btn big file-btn">${icon('image')} Velja mynd frá í dag<input type="file" accept="image/jpeg,image/*" id="pick-library" hidden></label>
     <button class="btn" data-close>Hætta við</button>`);
   const handle = async (file, fromCamera) => {
     if (!file) return;
     let taken = await readExifDate(file);
     if (!fromCamera) {
-      if (!taken) return toast('Gat ekki séð hvenær myndin var tekin — notaðu 📷 Taka mynd');
-      if (iso(taken) !== todayIso()) return toast('Myndin þarf að vera tekin í dag 📅');
+      if (!taken) return toast('Gat ekki séð hvenær myndin var tekin — notaðu „Taka mynd“');
+      if (iso(taken) !== todayIso()) return toast('Myndin þarf að vera tekin í dag');
     } else if (taken && iso(taken) !== todayIso()) {
-      return toast('Myndin þarf að vera tekin í dag 📅');
+      return toast('Myndin þarf að vera tekin í dag');
     }
     s.close();
     setTimeout(() => openPhotoCaption(file, taken || new Date()), 230);
@@ -1212,7 +1208,7 @@ function renderPhotos(view) {
           const n = state.reactions.filter((r) => r.photo_id === p.id).length;
           return `<button class="thumb big" data-photo="${esc(p.id)}">
             <img src="${esc(photoSrc(p))}" alt="" loading="lazy">${avatar(profileById(p.profile_id), 'sm')}
-            ${n ? `<span class="react-count">❤️ ${n}</span>` : ''}</button>`;
+            ${n ? `<span class="react-count">${icon('heart')} ${n}</span>` : ''}</button>`;
         }).join('')}</div>
       </section>`;
   }).join('');
@@ -1220,8 +1216,8 @@ function renderPhotos(view) {
   view.innerHTML = `
     ${subNav('photos')}
     <section class="hero compact"><h1>Árið okkar</h1></section>
-    ${myPhotoToday() ? '' : '<button class="btn primary big" id="photo-add">📷 Taka mynd dagsins</button>'}
-    ${days || '<div class="empty"><div class="empty-mark">📸</div><p>Engar myndir ennþá</p><p class="muted">Ein mynd á dag frá hverjum — og í lok árs eigið þið heilt myndaalbúm.</p></div>'}
+    ${myPhotoToday() ? '' : `<button class="btn primary big" id="photo-add">${icon('camera')} Taka mynd dagsins</button>`}
+    ${days || `<div class="empty"><div class="empty-mark">${icon('camera')}</div><p>Engar myndir ennþá</p><p class="muted">Ein mynd á dag frá hverjum — og í lok árs eigið þið heilt myndaalbúm.</p></div>`}
     ${state.photos.length ? '<button class="btn" id="photos-more">Sjá eldri myndir</button>' : ''}`;
   bindSaman(view);
   view.querySelector('#photos-more')?.addEventListener('click', async () => {
@@ -1236,7 +1232,7 @@ const KUDOS_QUICK = ['Takk fyrir hjálpina!', 'Vel gert í dag!', 'Þú ert frá
 function kudosRow(k) {
   const from = profileById(k.from_id), to = k.to_id ? profileById(k.to_id) : null;
   return `<li class="kudos">
-    <div class="kudos-who">${avatar(from, 'sm')}<span class="arrow">→</span>${to ? avatar(to, 'sm') : '<span class="avatar sm" style="--c:var(--accent)">👨‍👩‍👧‍👦</span>'}
+    <div class="kudos-who">${avatar(from, 'sm')}<span class="arrow">→</span>${to ? avatar(to, 'sm') : famAv()}
       <span class="muted small">${esc(firstName(from?.name || ''))} → ${esc(to ? firstName(to.name) : 'öll fjölskyldan')} · ${esc(relTime(k.created_at))}</span></div>
     <p class="kudos-body"><span class="kudos-emoji">${esc(k.emoji)}</span> ${esc(k.body)}</p>
   </li>`;
@@ -1247,13 +1243,13 @@ function kudosHomeCard() {
   return `
     <section class="card kudos-card">
       <div class="card-head">
-        <div class="card-label">💛 Hrós dagsins</div>
+        <div class="card-label">${icon('heart')} Hrós dagsins</div>
         <button class="link small" data-go="kudos">Hrósveggurinn ›</button>
       </div>
       ${today.length ? `<ul class="kudos-list">${today.slice(0, 2).map(kudosRow).join('')}</ul>
         ${today.length > 2 ? `<p class="muted small">+${today.length - 2} fleiri í dag</p>` : ''}`
-        : '<p class="muted">Enginn hefur fengið hrós í dag ennþá. Vertu fyrst/ur! 💛</p>'}
-      <button class="btn add-rem" id="kudos-add">💛 Senda hrós</button>
+        : '<p class="muted">Enginn hefur fengið hrós í dag ennþá. Vertu fyrst/ur!</p>'}
+      <button class="btn add-rem" id="kudos-add">${icon('heart')} Senda hrós</button>
     </section>`;
 }
 
@@ -1261,9 +1257,9 @@ function renderKudos(view) {
   view.innerHTML = `
     ${subNav('kudos')}
     <section class="hero compact"><h1>Hrósveggurinn</h1></section>
-    <button class="btn primary big" id="kudos-add">💛 Senda hrós</button>
+    <button class="btn primary big" id="kudos-add">${icon('heart')} Senda hrós</button>
     ${state.kudos.length ? `<ul class="kudos-list wall">${state.kudos.map(kudosRow).join('')}</ul>`
-      : '<div class="empty"><div class="empty-mark">💛</div><p>Engin hrós ennþá</p><p class="muted">Sendu fyrsta hrósið!</p></div>'}`;
+      : `<div class="empty"><div class="empty-mark">${icon('heart')}</div><p>Engin hrós ennþá</p><p class="muted">Sendu fyrsta hrósið!</p></div>`}`;
   bindSaman(view);
 }
 
@@ -1271,11 +1267,11 @@ function openKudosSheet() {
   let to = null, emoji = '💛';
   const others = state.profiles.filter((p) => p.id !== state.me.id);
   const s = openSheet(`
-    <h2>💛 Senda hrós</h2>
+    <h2>Senda hrós</h2>
     <div class="card-label">Til</div>
     <div class="filters wrap">
       ${others.map((p) => `<button class="filter" data-kto="${esc(p.id)}" style="--c:${esc(p.color)}">${avatar(p, 'sm')}<span>${esc(firstName(p.name))}</span></button>`).join('')}
-      <button class="filter" data-kto="allir" style="--c:var(--accent)"><span class="avatar sm" style="--c:var(--accent)">👨‍👩‍👧‍👦</span><span>Allir</span></button>
+      <button class="filter" data-kto="allir" style="--c:var(--accent)">${famAv()}<span>Allir</span></button>
     </div>
     <div class="emoji-pick">${KUDOS_EMOJI.map((e) => `<button class="${e === emoji ? 'on' : ''}" data-kemoji="${e}">${e}</button>`).join('')}</div>
     <label class="field"><span>Hrósið</span><textarea id="kudos-text" rows="2" maxlength="200" placeholder="Hvað viltu þakka eða hrósa fyrir?"></textarea></label>
@@ -1325,25 +1321,25 @@ function renderWishes(view) {
       <button class="filter ${p.id === who.id ? 'on' : ''}" data-wperson="${esc(p.id)}" style="--c:${esc(p.color)}">${avatar(p, 'sm')}<span>${esc(p.id === state.me.id ? 'Minn listi' : firstName(p.name))}</span></button>`).join('')}</div>
     <section class="hero compact"><h1>${mineList ? 'Óskalistinn minn' : `Óskalisti — ${esc(firstName(who.name))}`}</h1>
       ${mineList ? '<p class="muted small">Hinir geta tekið frá gjafir — þú sérð aldrei hvað er frátekið 🤫</p>' : '<p class="muted small">Taktu frá það sem þú ætlar að gefa. ' + esc(firstName(who.name)) + ' sér það ekki 🤫</p>'}</section>
-    ${mineList ? '<button class="btn primary big" id="wish-add">＋ Ný ósk</button>' : ''}
+    ${mineList ? `<button class="btn primary big" id="wish-add">${icon('plus')} Ný ósk</button>` : ''}
     ${list.length ? `<ul class="wish-list">${list.map((w) => {
       const link = safeUrl(w.url);
       const claimer = w.claimed_by ? profileById(w.claimed_by) : null;
       let action = '';
-      if (mineList) action = `<button class="btn small-btn" data-got="${esc(w.id)}">Fékk þetta 🎉</button>`;
-      else if (!w.claimed_by) action = `<button class="btn small-btn primary" data-claim="${esc(w.id)}">Ég kaupi þessa 🤫</button>`;
-      else if (w.claimed_by === state.me.id) action = `<button class="btn small-btn" data-unclaim="${esc(w.id)}">✓ Þú tókst þessa · Hætta við</button>`;
-      else action = `<span class="claimed">🤫 ${esc(firstName(claimer?.name || ''))} tók frá</span>`;
+      if (mineList) action = `<button class="btn small-btn" data-got="${esc(w.id)}">${icon('check')} Fékk þetta</button>`;
+      else if (!w.claimed_by) action = `<button class="btn small-btn primary" data-claim="${esc(w.id)}">${icon('gift')} Ég kaupi þessa</button>`;
+      else if (w.claimed_by === state.me.id) action = `<button class="btn small-btn" data-unclaim="${esc(w.id)}">${icon('check')} Þú tókst þessa · Hætta við</button>`;
+      else action = `<span class="claimed">${icon('gift')} ${esc(firstName(claimer?.name || ''))} tók frá</span>`;
       return `<li class="wish ${!mineList && w.claimed_by ? 'is-claimed' : ''}">
         <button class="wish-main" ${mineList ? `data-wedit="${esc(w.id)}"` : 'disabled'}>
-          <span class="wish-title">${w.starred ? '⭐ ' : ''}${esc(w.title)}</span>
+          <span class="wish-title">${w.starred ? icon('star', 'star-on') + ' ' : ''}${esc(w.title)}</span>
           ${w.price ? `<span class="wish-price">${esc(kr(w.price))}</span>` : ''}
           ${w.note ? `<span class="muted small">${esc(w.note)}</span>` : ''}
         </button>
-        <div class="wish-actions">${link ? `<a class="link small" href="${esc(link)}" target="_blank" rel="noopener">Skoða ↗</a>` : '<span></span>'}${action}</div>
+        <div class="wish-actions">${link ? `<a class="link small" href="${esc(link)}" target="_blank" rel="noopener">Skoða ${icon('external-link')}</a>` : '<span></span>'}${action}</div>
       </li>`;
     }).join('')}</ul>`
-      : `<div class="empty"><div class="empty-mark">🎁</div><p>${mineList ? 'Listinn þinn er tómur' : `${esc(firstName(who.name))} hefur ekki sett neitt á listann`}</p>
+      : `<div class="empty"><div class="empty-mark">${icon('gift')}</div><p>${mineList ? 'Listinn þinn er tómur' : `${esc(firstName(who.name))} hefur ekki sett neitt á listann`}</p>
         ${mineList ? '<p class="muted">Bættu við því sem þig langar í — fyrir jól eða afmæli.</p>' : ''}</div>`}`;
 
   view.querySelectorAll('[data-wperson]').forEach((b) => b.addEventListener('click', () => { state.wishPerson = b.dataset.wperson; renderView(); }));
@@ -1353,7 +1349,7 @@ function renderWishes(view) {
     try { await state.backend.saveWish({ id, ...patch }); await loadWishes(); renderView(); if (msg) toast(msg); }
     catch { toast('Gat ekki vistað'); }
   };
-  view.querySelectorAll('[data-claim]').forEach((b) => b.addEventListener('click', () => upd(b.dataset.claim, { claimed_by: state.me.id, claimed_at: new Date().toISOString() }, 'Frátekið 🤫')));
+  view.querySelectorAll('[data-claim]').forEach((b) => b.addEventListener('click', () => upd(b.dataset.claim, { claimed_by: state.me.id, claimed_at: new Date().toISOString() }, 'Frátekið')));
   view.querySelectorAll('[data-unclaim]').forEach((b) => b.addEventListener('click', () => upd(b.dataset.unclaim, { claimed_by: null, claimed_at: null })));
   view.querySelectorAll('[data-got]').forEach((b) => b.addEventListener('click', async () => {
     try { await state.backend.deleteWish(b.dataset.got); await loadWishes(); renderView(); toast('Til hamingju með gjöfina 🎉'); }
@@ -1363,12 +1359,12 @@ function renderWishes(view) {
 
 function openWishEditor(w = null) {
   const s = openSheet(`
-    <h2>${w ? 'Breyta ósk' : '🎁 Ný ósk'}</h2>
+    <h2>${w ? 'Breyta ósk' : 'Ný ósk'}</h2>
     <label class="field"><span>Hvað langar þig í?</span><input id="w-title" maxlength="80" value="${esc(w?.title || '')}" placeholder="t.d. Airpods"></label>
     <label class="field"><span>Hlekkur <em class="muted">(valfrjálst)</em></span><input id="w-url" type="url" inputmode="url" value="${esc(w?.url || '')}" placeholder="https://…"></label>
     <label class="field"><span>Verð í kr. <em class="muted">(valfrjálst)</em></span><input id="w-price" inputmode="numeric" value="${esc(w?.price ?? '')}" placeholder="t.d. 9990"></label>
     <label class="field"><span>Athugasemd <em class="muted">(valfrjálst)</em></span><input id="w-note" maxlength="120" value="${esc(w?.note || '')}" placeholder="t.d. stærð M, svartur"></label>
-    <label class="toggle-row"><input type="checkbox" id="w-star" ${w?.starred ? 'checked' : ''}><span>⭐ Mig langar mest í þetta</span></label>
+    <label class="toggle-row"><input type="checkbox" id="w-star" ${w?.starred ? 'checked' : ''}><span>${icon('star')} Mig langar mest í þetta</span></label>
     <div class="sheet-actions">
       <button class="btn primary big" id="w-save">Vista</button>
       ${w ? '<button class="btn danger-text" id="w-del">Eyða ósk</button>' : ''}
@@ -1388,7 +1384,7 @@ function openWishEditor(w = null) {
       note: el.querySelector('#w-note').value.trim() || null,
       starred: el.querySelector('#w-star').checked,
     };
-    try { await state.backend.saveWish(row); await loadWishes(); s.close(); renderView(); toast(w ? 'Ósk uppfærð' : 'Ósk komin á listann 🎁'); }
+    try { await state.backend.saveWish(row); await loadWishes(); s.close(); renderView(); toast(w ? 'Ósk uppfærð' : 'Ósk komin á listann'); }
     catch (e) { console.error(e); toast('Gat ekki vistað — er búið að keyra 6-saman.sql?'); }
   });
   el.querySelector('#w-del')?.addEventListener('click', async () => {
@@ -1444,7 +1440,7 @@ function trophyHolders() {
   return best > 0 ? { ids: rows.filter((r) => r.points === best).map((r) => r.kid.id), points: best } : { ids: [], points: 0 };
 }
 
-const withTrophy = (p, size) => `<span class="trophy-wrap">${avatar(p, size)}${trophyHolders().ids.includes(p.id) ? '<span class="trophy-badge" title="Bikarhafi">🏆</span>' : ''}</span>`;
+const withTrophy = (p, size) => `<span class="trophy-wrap">${avatar(p, size)}${trophyHolders().ids.includes(p.id) ? `<span class="trophy-badge" title="Bikarhafi">${icon('trophy')}</span>` : ''}</span>`;
 // Jöfn stig = sama sæti
 const rankIn = (rows, pts) => 1 + rows.filter((r) => r.points > pts).length;
 const rankOf = (kidId) => { const rows = leaderboard(); return rankIn(rows, rows.find((r) => r.kid.id === kidId)?.points || 0); };
@@ -1454,10 +1450,10 @@ function choreRow(c, kidId, { compact = false } = {}) {
   const other = !log && takenBy(c);
   const otherName = other ? firstName(profileById(other.profile_id)?.name || '') : '';
   let right;
-  if (log?.status === 'approved') right = `<span class="pts got">+${log.points} ⭐</span>`;
-  else if (log) right = '<span class="pts wait">Bíður 👀</span>';
+  if (log?.status === 'approved') right = `<span class="pts got">+${log.points} ${icon('star')}</span>`;
+  else if (log) right = `<span class="pts wait">${icon('clock')} Bíður</span>`;
   else if (other) right = `<span class="muted small">${esc(otherName)} tók það</span>`;
-  else right = `<span class="pts">${c.points} ⭐</span>`;
+  else right = `<span class="pts">${c.points} ${icon('star')}</span>`;
   const canUndo = log && !log.approved_by;
   const clickable = (!log && !other) || canUndo;
   return `
@@ -1483,10 +1479,10 @@ function laterThisWeek(kidId) {
   if (!rows.length) return '';
   return `
     <section class="card">
-      <div class="card-label">📅 Seinna í vikunni</div>
+      <div class="card-label">${icon('calendar-days')} Seinna í vikunni</div>
       <ul class="later-list">${rows.map(({ d, list }) => `
         <li><span class="later-day">${esc(DAYS_SHORT[d.getDay()])}</span>
-          <span class="later-chores">${list.map((c) => `<span>${esc(c.emoji)} ${esc(c.title)} <span class="muted small">${c.points} ⭐</span></span>`).join('')}</span></li>`).join('')}
+          <span class="later-chores">${list.map((c) => `<span>${esc(c.emoji)} ${esc(c.title)} <span class="muted small">${c.points} ${icon('star')}</span></span>`).join('')}</span></li>`).join('')}
       </ul>
       <p class="muted small">Verk sem eru alla daga eru ekki talin upp hér.</p>
     </section>`;
@@ -1501,15 +1497,15 @@ function myChoresCard() {
   return `
     <section class="card chores-card">
       <div class="card-head">
-        <div class="card-label">🧹 Verkin mín í dag</div>
+        <div class="card-label">${icon('list-checks')} Verkin mín í dag</div>
         <button class="link small" data-go="chores">Verk ›</button>
       </div>
       ${todo.length || pending.length
         ? `<ul class="chore-list">${[...todo, ...pending].map((c) => choreRow(c, state.me.id, { compact: true })).join('')}</ul>`
-        : `<p class="muted">${list.length ? 'Öll verkin búin í dag! 💪' : 'Engin verk í dag.'}</p>`}
+        : `<p class="muted">${list.length ? 'Öll verkin búin í dag!' : 'Engin verk í dag.'}</p>`}
       <div class="my-score">
-        ${trophyHolders().ids.includes(state.me.id) ? '<span>🏆 Þú ert með bikarinn!</span>' : ''}
-        <span><strong>${t.points} ⭐</strong> í vikunni</span>
+        ${trophyHolders().ids.includes(state.me.id) ? `<span class="trophy-line">${icon('trophy')} Þú ert með bikarinn!</span>` : ''}
+        <span><strong>${t.points}</strong> ${icon('star')} í vikunni</span>
       </div>
     </section>`;
 }
@@ -1519,15 +1515,15 @@ function approvalsCard() {
   if (!pending.length) return '';
   return `
     <section class="card approvals">
-      <div class="card-label">👀 Bíður samþykkis (${pending.length})</div>
+      <div class="card-label">${icon('clock')} Bíður samþykkis (${pending.length})</div>
       <ul class="approve-list">${pending.map((l) => {
         const c = state.chores.find((x) => x.id === l.chore_id);
         const k = profileById(l.profile_id);
         return `<li>${avatar(k, 'sm')}
           <div class="approve-text"><strong>${esc(c ? c.emoji + ' ' + c.title : 'Verk')}</strong>
-            <span class="muted small">${esc(firstName(k?.name || ''))} · ${l.points} ⭐${l.day !== todayIso() ? ' · ' + esc(DAYS_SHORT[fromIso(l.day).getDay()]) : ''}</span></div>
-          <button class="round-btn no" data-review="${esc(l.id)}" data-ok="0" aria-label="Ekki samþykkja">✕</button>
-          <button class="round-btn yes" data-review="${esc(l.id)}" data-ok="1" aria-label="Samþykkja">✓</button></li>`;
+            <span class="muted small">${esc(firstName(k?.name || ''))} · ${l.points} stig${l.day !== todayIso() ? ' · ' + esc(DAYS_SHORT[fromIso(l.day).getDay()]) : ''}</span></div>
+          <button class="round-btn no" data-review="${esc(l.id)}" data-ok="0" aria-label="Ekki samþykkja">${icon('x')}</button>
+          <button class="round-btn yes" data-review="${esc(l.id)}" data-ok="1" aria-label="Samþykkja">${icon('check')}</button></li>`;
       }).join('')}</ul>
     </section>`;
 }
@@ -1548,7 +1544,7 @@ async function toggleChore(choreId) {
     try { await state.backend.deleteChoreLog(log.id); } catch { toast('Gat ekki vistað'); await loadChores(); renderView(); }
     return;
   }
-  if (takenBy(c)) return toast('Einhver var á undan þér 😅');
+  if (takenBy(c)) return toast('Einhver var á undan þér');
   const row = { chore_id: c.id, profile_id: state.me.id, day: todayIso(), status: c.needs_approval ? 'pending' : 'approved', points: c.points };
   const temp = { ...row, id: 'tmp-' + Date.now(), approved_by: null };
   state.choreLogs.push(temp);
@@ -1557,14 +1553,14 @@ async function toggleChore(choreId) {
     const id = await state.backend.addChoreLog(row);
     temp.id = id;
     if (row.status === 'pending') {
-      toast('Sent til samþykkis 👀');
+      toast('Sent til samþykkis');
       state.backend.choreDone(id).catch(() => {});
     } else {
-      toast(`+${c.points} ⭐ Vel gert!`);
+      toast(`+${c.points} stig — vel gert!`);
     }
   } catch (e) {
     console.error(e);
-    toast(c.mode === 'anyone' ? 'Einhver var á undan þér 😅' : 'Gat ekki vistað — athugaðu netið');
+    toast(c.mode === 'anyone' ? 'Einhver var á undan þér' : 'Gat ekki vistað — athugaðu netið');
   }
   await loadChores(); renderView();
 }
@@ -1578,7 +1574,7 @@ async function reviewChore(logId, approve) {
   renderView();
   try {
     await state.backend.choreReview(logId, approve, state.me.id);
-    toast(approve ? `Samþykkt ✓ (+${log.points} ⭐ til ${firstName(profileById(log.profile_id)?.name || '')})` : 'Sent til baka 🔁');
+    toast(approve ? `Samþykkt (+${log.points} stig til ${firstName(profileById(log.profile_id)?.name || '')})` : 'Sent til baka');
   } catch (e) {
     console.error(e);
     toast('Gat ekki vistað — athugaðu netið');
@@ -1589,31 +1585,30 @@ async function reviewChore(logId, approve) {
 function renderChores(view) {
   if (!state.chores.length && state.backend.mode === 'live' && !isParent()) {
     view.innerHTML = `<section class="hero compact"><h1>Verk</h1></section>
-      <div class="empty"><div class="empty-mark">🧹</div><p>Engin verk ennþá</p></div>`;
+      <div class="empty"><div class="empty-mark">${icon('list-checks')}</div><p>Engin verk ennþá</p></div>`;
     return;
   }
   const mon = mondayIso();
   const rows = leaderboard(mon);
-  const medals = ['🥇', '🥈', '🥉'];
   const holders = trophyHolders();
   const holderNames = holders.ids.map((id) => firstName(profileById(id)?.name || ''));
 
   const board = `
     <section class="card board">
       <div class="card-head">
-        <div class="card-label">🏆 Stigatafla vikunnar</div>
+        <div class="card-label">${icon('trophy')} Stigatafla vikunnar</div>
         <span class="muted small">${esc(weekRange(fromIso(mon)))}</span>
       </div>
       <ol class="board-list">${rows.map((r, i) => `
         <li class="${r.kid.id === state.me.id ? 'me' : ''}">
-          <span class="medal">${r.points ? (medals[rankIn(rows, r.points) - 1] || `${rankIn(rows, r.points)}.`) : '–'}</span>
+          <span class="rank r${r.points ? rankIn(rows, r.points) : 0}">${r.points ? rankIn(rows, r.points) : '–'}</span>
           ${withTrophy(r.kid, '')}
           <span class="board-name">${esc(firstName(r.kid.name))}</span>
-          <span class="board-pts"><strong>${r.points}</strong> ⭐${r.pending ? `<span class="muted small"> +${r.pending} bíða</span>` : ''}</span>
+          <span class="board-pts"><strong>${r.points}</strong> ${icon('star')}${r.pending ? `<span class="muted small"> +${r.pending} bíða</span>` : ''}</span>
         </li>`).join('')}</ol>
       <p class="muted small board-foot">${holders.ids.length
-        ? `🏆 Bikarinn: ${esc(holderNames.join(' og '))} (${holders.points} stig síðustu viku)`
-        : 'Sá sem er efstur á sunnudagskvöld fær bikarinn 🏆'}</p>
+        ? `${icon('trophy')} Bikarinn: ${esc(holderNames.join(' og '))} (${holders.points} stig síðustu viku)`
+        : `${icon('trophy')} Sá sem er efstur á sunnudagskvöld fær bikarinn`}</p>
     </section>`;
 
   let mine = '';
@@ -1621,8 +1616,8 @@ function renderChores(view) {
     const list = choresToday(state.me.id);
     mine = `
       <section class="card">
-        <div class="card-label">🧹 Verkin mín í dag</div>
-        ${list.length ? `<ul class="chore-list">${list.map((c) => choreRow(c, state.me.id)).join('')}</ul>` : '<p class="muted">Engin verk í dag 🎉</p>'}
+        <div class="card-label">${icon('list-checks')} Verkin mín í dag</div>
+        ${list.length ? `<ul class="chore-list">${list.map((c) => choreRow(c, state.me.id)).join('')}</ul>` : '<p class="muted">Engin verk í dag</p>'}
         <p class="muted small">Ýttu á verk þegar það er búið. Stærri verk þarf mamma eða pabbi að samþykkja.</p>
       </section>
       ${laterThisWeek(state.me.id)}`;
@@ -1644,11 +1639,11 @@ function renderChores(view) {
     parentView = `
       ${approvalsCard()}
       <section class="card">
-        <div class="card-label">📋 Staðan í dag</div>
+        <div class="card-label">${icon('clipboard-list')} Staðan í dag</div>
         <ul class="kid-today">${today}</ul>
-        <p class="muted small">✓ grænt = búið · 👀 gult = bíður samþykkis · grátt = ekki búið</p>
+        <p class="muted small">Grænt = búið · gult = bíður samþykkis · grátt = ekki búið</p>
       </section>
-      <button class="btn big" id="manage-chores">⚙️ Sýsla með verkin</button>`;
+      <button class="btn big" id="manage-chores">${icon('settings')} Sýsla með verkin</button>`;
   }
 
   // Bara foreldrar sjá stigatöfluna; börnin sjá sín eigin stig
@@ -1657,10 +1652,10 @@ function renderChores(view) {
     const t = weekTotals(mon)[state.me.id] || { points: 0, pending: 0 };
     myPoints = `
       <section class="card board my-points">
-        <div class="card-label">⭐ Stigin mín í vikunni</div>
+        <div class="card-label">${icon('star')} Stigin mín í vikunni</div>
         <div class="big-points">${t.points}<span> stig</span></div>
         ${t.pending ? `<p class="muted small">+${t.pending} bíða samþykkis</p>` : ''}
-        ${holders.ids.includes(state.me.id) ? '<p class="trophy-line">🏆 Þú ert með bikarinn!</p>' : ''}
+        ${holders.ids.includes(state.me.id) ? `<p class="trophy-line">${icon('trophy')} Þú ert með bikarinn!</p>` : ''}
       </section>`;
   }
 
@@ -1686,16 +1681,16 @@ function daysSummary(days) {
 
 function openChoreList() {
   const s = openSheet(`
-    <h2>⚙️ Verkin</h2>
+    <h2>Verkin</h2>
     <ul class="rem-all">${state.chores.map((c) => {
       const who = (c.to_ids || []).length ? c.to_ids.map((id) => firstName(profileById(id)?.name || '')).join(', ') : 'Öll börnin';
       return `<li><button data-edit-chore="${esc(c.id)}">
-        <span class="rem-body">${esc(c.emoji)} ${esc(c.title)} <span class="pts">${c.points} ⭐</span></span>
+        <span class="rem-body">${esc(c.emoji)} ${esc(c.title)} <span class="pts">${c.points} ${icon('star')}</span></span>
         <span class="muted small">${esc(daysSummary(c.repeat_days))} · ${esc(who)} · ${c.mode === 'anyone' ? 'fyrstur fær' : 'hver og einn'}${c.needs_approval ? ' · samþykki' : ''}</span>
       </button></li>`;
     }).join('')}</ul>
     <div class="sheet-actions">
-      <button class="btn primary" id="new-chore">＋ Nýtt verk</button>
+      <button class="btn primary" id="new-chore">${icon('plus')} Nýtt verk</button>
       <button class="btn" data-close>Loka</button>
     </div>`);
   s.el.querySelector('#new-chore').addEventListener('click', () => { s.close(); setTimeout(() => openChoreEditor(null), 230); });
@@ -1718,7 +1713,7 @@ function openChoreEditor(existing) {
       <label class="field"><span>Verk</span><input id="ch-title" maxlength="60" value="${esc(c.title || '')}" placeholder="t.d. Vökva blómin"></label>
     </div>
     <div class="card-label">Stig</div>
-    <div class="chips" id="ch-points">${POINTS.map((p) => `<button class="chip pick-chip ${p === points ? 'on' : ''}" data-points="${p}">${p} ⭐</button>`).join('')}</div>
+    <div class="chips" id="ch-points">${POINTS.map((p) => `<button class="chip pick-chip ${p === points ? 'on' : ''}" data-points="${p}">${p} ${icon('star')}</button>`).join('')}</div>
     <div class="card-label">Hver gerir það?</div>
     <div class="segmented">
       <button data-mode="each" class="${mode === 'each' ? 'on' : ''}">Hver og einn</button>
@@ -1781,7 +1776,7 @@ function openChoreEditor(existing) {
     try {
       await state.backend.saveChore(row);
       await loadChores(); s.close(); renderView();
-      toast(existing ? 'Verk uppfært' : 'Nýtt verk komið 🧹');
+      toast(existing ? 'Verk uppfært' : 'Nýtt verk komið');
     } catch (e) { console.error(e); toast('Gat ekki vistað — er búið að keyra 5-heimilisverk.sql?'); }
   });
   el.querySelector('#ch-del')?.addEventListener('click', async () => {
@@ -1839,19 +1834,19 @@ function remindersCard() {
   return `
     <section class="card reminders">
       <div class="card-head">
-        <div class="card-label">📌 Áminningar</div>
+        <div class="card-label">${icon('pin')} Áminningar</div>
         <button class="link small" id="rem-all">Allar ›</button>
       </div>
       ${mine.length ? `<ul class="rem-list">${mine.map((r) => {
         const done = remIsDone(r);
         return `<li class="${done ? 'done' : ''}">
           <button class="rem-check" data-rem-done="${esc(r.id)}" aria-label="${done ? 'Ekki búið' : 'Búið'}: ${esc(r.body)}">
-            <span class="box">${done ? '✓' : ''}</span>
+            <span class="box">${done ? icon('check') : ''}</span>
             <span class="rem-text"><span class="rem-body">${esc(r.body)}</span>
               ${remTime(r) || !r.to_id ? `<span class="muted small">${remTime(r) ? 'kl. ' + esc(remTime(r)) : ''}${remTime(r) && !r.to_id ? ' · ' : ''}${!r.to_id ? 'öll fjölskyldan' : ''}</span>` : ''}</span>
           </button></li>`;
-      }).join('')}</ul>` : `<p class="muted rem-empty">${todays.length ? 'Allt búið í dag ✅' : 'Engar áminningar í dag.'}</p>`}
-      <button class="btn add-rem" id="rem-add">＋ Ný áminning</button>
+      }).join('')}</ul>` : `<p class="muted rem-empty">${todays.length ? 'Allt búið í dag' : 'Engar áminningar í dag.'}</p>`}
+      <button class="btn add-rem" id="rem-add">${icon('plus')} Ný áminning</button>
     </section>`;
 }
 
@@ -1879,12 +1874,12 @@ function openReminderSheet(existing = null, onClose = null) {
   const people = isParent()
     ? `<div class="card-label">Fyrir hvern</div>
        <div class="filters wrap" id="rem-to">
-         <button class="filter ${to === 'allir' ? 'on' : ''}" data-to="allir" style="--c:var(--accent)"><span class="avatar sm" style="--c:var(--accent)">👨‍👩‍👧‍👦</span><span>Allir</span></button>
+         <button class="filter ${to === 'allir' ? 'on' : ''}" data-to="allir" style="--c:var(--accent)">${famAv()}<span>Allir</span></button>
          ${state.profiles.map((p) => `<button class="filter ${to === p.id ? 'on' : ''}" data-to="${esc(p.id)}" style="--c:${esc(p.color)}">${avatar(p, 'sm')}<span>${esc(p.id === state.me.id ? 'Ég' : firstName(p.name))}</span></button>`).join('')}
        </div>` : '';
 
   const s = openSheet(`
-    <h2>${editing ? 'Breyta áminningu' : '📌 Ný áminning'}</h2>
+    <h2>${editing ? 'Breyta áminningu' : 'Ný áminning'}</h2>
     <label class="field"><span>Hvað á að muna?</span>
       <input id="rem-body" maxlength="120" value="${esc(r.body || '')}" placeholder="t.d. Sunddót í skólann"></label>
     ${people}
@@ -1960,7 +1955,7 @@ function openReminderSheet(existing = null, onClose = null) {
       await state.backend.saveReminder(row);
       await loadReminders();
       close(); renderView();
-      toast(editing ? 'Áminning uppfærð' : 'Áminning komin 📌');
+      toast(editing ? 'Áminning uppfærð' : 'Áminning komin');
     } catch (e) {
       console.error(e);
       toast('Gat ekki vistað — er búið að uppfæra gagnagrunninn (4-aminningar.sql)?');
@@ -1981,12 +1976,12 @@ function openAllReminders() {
   const visible = state.reminders.filter((r) =>
     (isParent() || !r.to_id || r.to_id === state.me.id) && !(r.once_date && r.once_date < today));
   const groups = [
-    { id: null, label: 'Öll fjölskyldan', icon: '<span class="avatar sm" style="--c:var(--accent)">👨‍👩‍👧‍👦</span>' },
+    { id: null, label: 'Öll fjölskyldan', icon: famAv() },
     ...state.profiles.map((p) => ({ id: p.id, label: p.name, icon: avatar(p, 'sm') })),
   ].map((g) => ({ ...g, list: visible.filter((r) => (r.to_id || null) === g.id) })).filter((g) => g.list.length);
 
   const s = openSheet(`
-    <h2>📌 Áminningar</h2>
+    <h2>Áminningar</h2>
     ${groups.length ? groups.map((g) => `
       <section class="rem-group">
         <div class="rem-group-head">${g.icon}<strong>${esc(g.label)}</strong></div>
@@ -1997,7 +1992,7 @@ function openAllReminders() {
           </button></li>`).join('')}</ul>
       </section>`).join('') : '<p class="muted">Engar áminningar ennþá.</p>'}
     <div class="sheet-actions">
-      <button class="btn primary" id="rem-new">＋ Ný áminning</button>
+      <button class="btn primary" id="rem-new">${icon('plus')} Ný áminning</button>
       <button class="btn" data-close>Loka</button>
     </div>`);
   s.el.querySelector('#rem-new').addEventListener('click', () => { s.close(); setTimeout(() => openReminderSheet(null, openAllReminders), 230); });
@@ -2052,13 +2047,13 @@ function noticesCard() {
   if (!mine.length) return '';
   return `
     <section class="card notices">
-      <div class="card-label">📣 Skilaboð</div>
+      <div class="card-label">${icon('megaphone')} Skilaboð</div>
       <ul class="notice-list">
         ${mine.map((n) => {
           const from = profileById(n.from_id);
           return `<li>${avatar(from, 'sm')}<div class="notice-text"><p class="notice-body">${esc(n.body)}</p>
             <p class="muted small">${esc(from ? firstName(from.name) : '')}${n.to_id ? ' · bara til þín' : ''} · ${esc(relTime(n.created_at))}</p></div>
-            <button class="notice-close" data-dismiss="${esc(n.id)}" aria-label="Loka skilaboðum">×</button></li>`;
+            <button class="notice-close" data-dismiss="${esc(n.id)}" aria-label="Loka skilaboðum">${icon('x')}</button></li>`;
         }).join('')}
       </ul>
     </section>`;
@@ -2071,7 +2066,7 @@ function pushPromptCard() {
   if (Date.now() - later < 3 * 86400000) return '';
   return `
     <section class="card push-prompt">
-      <div class="card-label">🔔 Tilkynningar</div>
+      <div class="card-label">${icon('bell')} Tilkynningar</div>
       <p>${isParent() ? 'Fáðu skilaboð sem send eru á fjölskylduna.' : 'Kveiktu á tilkynningum svo þú missir ekki af skilaboðum frá mömmu og pabba.'}</p>
       <div class="row-actions">
         <button class="btn primary" id="push-yes">Kveikja á tilkynningum</button>
@@ -2084,14 +2079,14 @@ function pushMenuRow() {
   if (state.backend.mode !== 'live') return '';
   if (!pushSupported()) {
     return isIOS() && !isStandalone()
-      ? '<p class="menu-note">🔔 Opnaðu appið af heimaskjánum til að geta fengið tilkynningar.</p>'
-      : '<p class="menu-note">🔔 Þessi vafri styður ekki tilkynningar.</p>';
+      ? `<p class="menu-note">${icon('bell')} Opnaðu appið af heimaskjánum til að geta fengið tilkynningar.</p>`
+      : `<p class="menu-note">${icon('bell-off')} Þessi vafri styður ekki tilkynningar.</p>`;
   }
-  if (Notification.permission === 'granted') return '<p class="menu-note">🔔 Kveikt á tilkynningum í þessum síma</p>';
+  if (Notification.permission === 'granted') return `<p class="menu-note">${icon('bell')} Kveikt á tilkynningum í þessum síma</p>`;
   if (Notification.permission === 'denied') {
-    return '<p class="menu-note">🔕 Tilkynningar eru bannaðar. Leyfðu þær í Stillingum símans → Tilkynningar → Fjölskyldan.</p>';
+    return `<p class="menu-note">${icon('bell-off')} Tilkynningar eru bannaðar. Leyfðu þær í Stillingum símans → Tilkynningar → Fjölskyldan.</p>`;
   }
-  return '<button id="enable-push">🔔 Kveikja á tilkynningum</button>';
+  return `<button id="enable-push">${icon('bell')} Kveikja á tilkynningum</button>`;
 }
 
 async function enablePush() {
@@ -2108,7 +2103,7 @@ async function enablePush() {
   }
   try {
     await subscribePush();
-    toast('Kveikt á tilkynningum 🔔');
+    toast('Kveikt á tilkynningum');
   } catch (e) {
     console.error(e);
     toast(e.code === 'not_setup' ? 'Það þarf að uppfæra þjóninn fyrst' : 'Gat ekki kveikt á tilkynningum — reyndu aftur');
@@ -2144,10 +2139,10 @@ function openSendSheet() {
   let to = 'allir';
   const people = state.profiles.filter((p) => p.id !== state.me.id);
   const s = openSheet(`
-    <h2>📣 Senda tilkynningu</h2>
+    <h2>Senda tilkynningu</h2>
     <div class="card-label">Til</div>
     <div class="filters wrap" id="to-list">
-      <button class="filter on" data-to="allir" style="--c:var(--accent)"><span class="avatar sm" style="--c:var(--accent)">👨‍👩‍👧‍👦</span><span>Allir</span></button>
+      <button class="filter on" data-to="allir" style="--c:var(--accent)">${famAv()}<span>Allir</span></button>
       ${people.map((p) => `<button class="filter" data-to="${esc(p.id)}" style="--c:${esc(p.color)}">${avatar(p, 'sm')}<span>${esc(firstName(p.name))}</span></button>`).join('')}
     </div>
     <label class="field"><span>Skilaboð</span>
@@ -2182,7 +2177,7 @@ function openSendSheet() {
       const who = to === 'allir' ? null : firstName(profileById(to).name);
       if (state.backend.mode === 'demo') toast('Sent (prufuútgáfa — engin tilkynning fer í síma)');
       else if (!res.devices) toast(who ? `Vistað — en ${who} hefur ekki kveikt á tilkynningum` : 'Vistað — enginn hefur kveikt á tilkynningum ennþá');
-      else toast(`Sent 📣 (${res.sent} af ${res.devices} ${res.devices === 1 ? 'síma' : 'símum'})`);
+      else toast(`Sent (${res.sent} af ${res.devices} ${res.devices === 1 ? 'síma' : 'símum'})`);
     } catch (e) {
       console.error(e);
       btn.disabled = false; label();
