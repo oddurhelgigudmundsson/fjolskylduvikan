@@ -1,5 +1,5 @@
 // Gagnalag: Supabase þegar lykill er settur inn, annars prufuhamur (localStorage).
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
+import { SUPABASE_URL, SUPABASE_ANON_KEY, CALENDAR_FUNCTION } from './config.js';
 
 export async function createBackend() {
   if (SUPABASE_URL && SUPABASE_ANON_KEY) return supabaseBackend();
@@ -38,9 +38,9 @@ async function supabaseBackend() {
     async saveMeal(meal) { ok(await sb.from('meals').upsert(meal, { onConflict: 'day' })); },
     async deleteMeal(day) { ok(await sb.from('meals').delete().eq('day', day)); },
 
-    // Dagatal: Edge Function "calendar" les Google-dagatölin
+    // Dagatal: Edge Function (sjá CALENDAR_FUNCTION í config.js) les Google-dagatölin
     async listEvents(from, to) {
-      const { data, error } = await sb.functions.invoke('calendar', { body: { from, to } });
+      const { data, error } = await sb.functions.invoke(CALENDAR_FUNCTION || 'calendar', { body: { from, to } });
       if (error) {
         let code = 'error';
         try { code = (await error.context?.json())?.error || code; } catch { /* ekkert */ }

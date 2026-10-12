@@ -7,3 +7,6 @@
 
 export const SUPABASE_URL = 'https://kuqxnwxcocxecxxwczqm.supabase.co';
 export const SUPABASE_ANON_KEY = 'sb_publishable__isNdG954mu5XoGnxdifiw_jta0WfpD';
+
+// Nafnið á dagatalsfallinu í Supabase (Edge Functions)
+export const CALENDAR_FUNCTION = 'clever-api';

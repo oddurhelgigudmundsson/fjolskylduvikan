@@ -52,7 +52,7 @@ Bump `VERSION` in `sw.js` so phones pick up the new files, then push to `main`.
 ## Calendar
 The **Dagatal** tab shows the Google calendars "Heimilið" and "Heimilið vol.2", read-only. The Supabase Edge Function `supabase/functions/calendar/index.ts` fetches each calendar's secret iCal address and expands repeating events. It assigns each event to whoever is named in the title (inflected names count: Ölmu, Thelmu, Pétri, Odds). Events with no name go to the whole family (Heimilið) or to Oddur (vol.2). An event that appears in both calendars is shown once.
 
-Setup: in Supabase **Edge Functions → Secrets**, add `ICAL_HEIMILID` and `ICAL_ODDUR` (each calendar's "Secret address in iCal format"). Then deploy the function under the name `calendar` with **Verify JWT** turned off. The function checks the family login itself.
+Setup: in Supabase **Edge Functions → Secrets**, add `ICAL_HEIMILID` and `ICAL_ODDUR` (each calendar's "Secret address in iCal format"). Then deploy the function (its name goes in `CALENDAR_FUNCTION` in `js/config.js`; currently `clever-api`) with **Verify JWT** turned off. The function checks the family login itself.
 
 ## Next stages
 1. Chores with points, approvals, streaks and a reward shop.
