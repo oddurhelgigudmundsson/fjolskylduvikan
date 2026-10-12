@@ -1,7 +1,7 @@
 import { createBackend } from './data.js';
 import { CALENDAR_FUNCTION } from './config.js';
 
-const APP_VERSION = 'fv-v6';
+const APP_VERSION = 'fv-v7';
 import {
   DAYS, DAYS_SHORT, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -75,6 +75,11 @@ async function startMain() {
     state.backend.subscribe('meals', async () => { await loadMeals(); refreshIf(['home', 'menu']); }),
   ];
 }
+
+// Forsíðan uppfærist á mínútu fresti svo liðnir viðburðir detti út
+setInterval(() => {
+  if (state.me && state.tab === 'home' && document.visibilityState === 'visible') renderView();
+}, 60000);
 
 // Síminn vaknar (app opnað aftur af heimaskjá) → sækja nýjustu gögn
 document.addEventListener('visibilitychange', async () => {
@@ -416,12 +421,18 @@ function renderHome(view) {
 }
 
 function todayCard() {
-  const today = eventsOn(todayIso());
+  // Börn sjá bara sína viðburði (og það sem er fyrir alla); foreldrar sjá alla.
+  // Viðburðir sem eru búnir detta út; heilsdagsviðburðir standa allan daginn.
+  const now = new Date();
+  const mine = eventsOn(todayIso(), isParent() ? 'allir' : state.me.id);
+  const today = mine.filter((e) => e.allDay || new Date(e.end) > now);
   let body;
   if (state.calStatus === 'loading') body = '<p class="muted">Sæki dagatalið…</p>';
   else if (state.calStatus === 'not_setup') body = '<p class="muted">Dagatalið er ekki tengt ennþá.</p>';
   else if (state.calStatus === 'error' && !today.length) body = '<p class="muted">Náði ekki í dagatalið — reyni aftur þegar netið kemur.</p>';
-  else if (!today.length) body = '<p class="muted">Ekkert á dagskrá í dag 🌿</p>';
+  else if (!today.length) body = mine.length
+    ? '<p class="muted">Allt búið í dag ✅</p>'
+    : '<p class="muted">Ekkert á dagskrá í dag 🌿</p>';
   else body = `<ul class="events compact">${today.slice(0, 6).map(eventRow).join('')}</ul>
     ${today.length > 6 ? `<p class="muted small">+${today.length - 6} í viðbót</p>` : ''}`;
   return `
