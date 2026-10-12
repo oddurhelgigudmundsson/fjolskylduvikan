@@ -1,8 +1,9 @@
 import { createBackend } from './data.js';
 import { icon } from './icons.js';
+import { jokeOfTheDay } from './jokes.js';
 import { CALENDAR_FUNCTION } from './config.js';
 
-const APP_VERSION = 'fv-v23';
+const APP_VERSION = 'fv-v24';
 import {
   DAYS, DAYS_SHORT, MONTHS, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -487,6 +488,8 @@ function renderHome(view) {
         ? `<div class="chips">${open.slice(0, 6).map((i) => `<span class="chip">${esc(i.name)}</span>`).join('')}${open.length > 6 ? `<span class="chip more">+${open.length - 6}</span>` : ''}</div>`
         : '<p class="muted">Listinn er tómur. Vel gert!</p>'}
     </button>
+
+    ${jokeCard()}
     `;
 
   view.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
@@ -494,6 +497,9 @@ function renderHome(view) {
   view.querySelector('#push-yes')?.addEventListener('click', enablePush);
   bindChoreButtons(view);
   bindSaman(view);
+  view.querySelector('#joke-reveal')?.addEventListener('click', (e) => {
+    e.currentTarget.closest('.joke-card').classList.add('revealed');
+  });
   view.querySelector('#rem-add')?.addEventListener('click', () => openReminderSheet());
   view.querySelector('#rem-all')?.addEventListener('click', openAllReminders);
   view.querySelectorAll('[data-rem-done]').forEach((b) => b.addEventListener('click', () => toggleRemDone(b.dataset.remDone)));
@@ -502,6 +508,18 @@ function renderHome(view) {
     renderView();
   }));
   view.querySelector('#push-later')?.addEventListener('click', () => { store.set('fv.pushlater', String(Date.now())); renderView(); });
+}
+
+// Brandari dagsins — neðst á forsíðunni, sami fyrir alla í dag
+function jokeCard() {
+  const j = jokeOfTheDay();
+  return `
+    <section class="card joke-card">
+      <div class="card-label">${icon('laugh')} Brandari dagsins</div>
+      <p class="joke-q">${esc(j.q)}</p>
+      ${j.a ? `<button class="btn small-btn" id="joke-reveal">Sjá svarið</button>
+        <p class="joke-a">${esc(j.a)}</p>` : ''}
+    </section>`;
 }
 
 function todayCard() {

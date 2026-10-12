@@ -705,3 +705,12 @@ input, textarea, .segmented, .segmented button, .filter, .day-chip,
 .rank.r2 { background: #D9DDE3; color: #4A5260; }
 .rank.r3 { background: #E8B98F; color: #6A3F1B; }
 .event .muted .i, p .i { width: 1em; height: 1em; }
+
+/* Brandari dagsins */
+.joke-card { background: var(--c-gray); box-shadow: none; }
+.joke-q { font-size: 17px; font-weight: 600; line-height: 1.4; margin-bottom: 10px; }
+.joke-a { display: none; font-size: 17px; line-height: 1.4; color: var(--ink); padding-left: 10px; border-left: 3px solid var(--c-yellow-t); }
+.joke-card.revealed .joke-a { display: block; animation: joke-in .25s ease-out; }
+.joke-card.revealed #joke-reveal { display: none; }
+.joke-card #joke-reveal { background: var(--card); box-shadow: var(--shadow-sm); }
+@keyframes joke-in { from { opacity: 0; transform: translateY(-4px); } }
