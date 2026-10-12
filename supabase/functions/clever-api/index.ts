@@ -4,8 +4,8 @@
 // 2) Tilkynningar: foreldrar senda skilaboð á einn eða alla (Web Push).
 // 3) Áminningar: klukka í gagnagrunninum (pg_cron) kallar hér á 5 mín fresti
 //    og áminningar sem eiga að fara núna eru sendar í síma viðkomandi.
-// 4) Heimilisverk: foreldrar fá tilkynningu þegar verk bíður samþykkis, börnin
-//    þegar það er samþykkt, og allir á mánudagsmorgni hver vann vikuna 🏆.
+// 4) Heimilisverk: foreldrar fá tilkynningu þegar verk bíður samþykkis, og börnin
+//    þegar það er samþykkt. (Sigurvegara vikunnar tilkynna foreldrarnir sjálfir.)
 //
 // Leyndarmál (Supabase → Edge Functions → Secrets):
 //   ICAL_HEIMILID  – leynileg iCal-slóð "Heimilið"
@@ -50,9 +50,7 @@ Deno.serve(async (req) => {
     try {
       const { data } = await admin().from('app_settings').select('value').eq('key', 'cron').maybeSingle();
       if (!data?.value?.key || data.value.key !== cronKey) return json({ error: 'forbidden' }, 403);
-      const out = await runReminders();
-      out.winner = await announceWinner();
-      return json(out);
+      return json(await runReminders());
     } catch (e) {
       console.error(e);
       return json({ error: 'server_error', detail: String(e?.message || e) }, 500);
@@ -252,47 +250,6 @@ async function choreReview({ log_id, approve, by }) {
     await pushTo(db, log.profile_id, { title: '🔁 Ekki alveg búið', body: `${first(parent.name)}: ${what} — reyndu aftur 🙂`, tag: 'chore-' + log.id, url: './' });
   }
   return json({ ok: true });
-}
-
-const addDaysIso = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
-
-// Mánudagsmorgunn kl. 08 eða seinna: tilkynna sigurvegara síðustu viku (einu sinni)
-export function lastWeek(now) {
-  const monday = addDaysIso(now.day, -((now.weekday + 6) % 7));
-  return { from: addDaysIso(monday, -7), to: addDaysIso(monday, -1) };
-}
-
-export function winnersOf(rows, kids) {
-  const totals = Object.fromEntries(kids.map((k) => [k.id, 0]));
-  for (const r of rows) if (r.profile_id in totals) totals[r.profile_id] += r.points;
-  const best = Math.max(0, ...Object.values(totals));
-  return { best, ids: best > 0 ? Object.keys(totals).filter((id) => totals[id] === best) : [] };
-}
-
-async function announceWinner() {
-  const now = icelandNow();
-  if (now.weekday !== 1 || now.minutes < 8 * 60) return null;
-  const db = admin();
-  const week = lastWeek(now);
-  const key = 'winner-' + week.from;
-  const mark = await db.from('app_settings').insert({ key, value: { at: new Date().toISOString() } });
-  if (mark.error) return null;                                   // þegar tilkynnt
-
-  const { data: kids } = await db.from('profiles').select('id, name').eq('role', 'child');
-  const { data: rows, error } = await db.from('chore_log').select('profile_id, points')
-    .eq('status', 'approved').gte('day', week.from).lte('day', week.to);
-  if (error) throw error;
-  const w = winnersOf(rows || [], kids || []);
-  if (!w.ids.length) return { none: true };
-  const names = w.ids.map((id) => first(kids.find((k) => k.id === id)?.name));
-  const who = names.length > 1 ? names.slice(0, -1).join(', ') + ' og ' + names.at(-1) : names[0];
-  await pushTo(db, null, {
-    title: '🏆 Sigurvegari vikunnar!',
-    body: `${who} ${names.length > 1 ? 'unnu' : 'vann'} vikuna með ${w.best} stigum. Bikarinn flytur!`,
-    tag: key,
-    url: './',
-  });
-  return { winners: w.ids, points: w.best };
 }
 
 // ------------------------------------------------------------------

@@ -70,7 +70,7 @@ A fixed "📌 Áminningar" card sits at the top of everyone's home screen and sh
 - Database: run `supabase/4-aminningar.sql` once.
 
 ## Chores and the weekly trophy (Verk)
-- The **Verk** tab shows the weekly leaderboard (Monday to Sunday, kids only). Tied scores share a place. Whoever tops last week's board gets 🏆 on their avatar, and the real trophy goes to their room. On Monday at 08:00 everyone gets a notification saying who won.
+- The **Verk** tab shows the weekly leaderboard (Monday to Sunday, kids only). Tied scores share a place. Whoever tops last week's board gets 🏆 on their avatar, and the real trophy goes to their room. The parents announce the winner themselves on Sunday evening; the app sends no automatic winner notification.
 - Kids see "Verkin mín í dag" on their home screen and tap a chore when it's done. Small chores give points straight away. Bigger chores (`needs_approval`) wait for a parent, who gets a notification and approves (✓) or sends it back (✕) from the home screen. The kid then gets a notification either way.
 - Each chore is either `each` (everyone does their own, like making the bed) or `anyone` (first one to do it gets the points, like taking out the trash). Each chore also has its points, its weekdays, and optionally which kids it's for.
 - Parents manage chores under **⚙️ Sýsla með verkin**.
