@@ -4,6 +4,8 @@
 // 2) Tilkynningar: foreldrar senda skilaboð á einn eða alla (Web Push).
 // 3) Áminningar: klukka í gagnagrunninum (pg_cron) kallar hér á 5 mín fresti
 //    og áminningar sem eiga að fara núna eru sendar í síma viðkomandi.
+// 4) Heimilisverk: foreldrar fá tilkynningu þegar verk bíður samþykkis, börnin
+//    þegar það er samþykkt, og allir á mánudagsmorgni hver vann vikuna 🏆.
 //
 // Leyndarmál (Supabase → Edge Functions → Secrets):
 //   ICAL_HEIMILID  – leynileg iCal-slóð "Heimilið"
@@ -48,7 +50,9 @@ Deno.serve(async (req) => {
     try {
       const { data } = await admin().from('app_settings').select('value').eq('key', 'cron').maybeSingle();
       if (!data?.value?.key || data.value.key !== cronKey) return json({ error: 'forbidden' }, 403);
-      return json(await runReminders());
+      const out = await runReminders();
+      out.winner = await announceWinner();
+      return json(out);
     } catch (e) {
       console.error(e);
       return json({ error: 'server_error', detail: String(e?.message || e) }, 500);
@@ -67,6 +71,8 @@ Deno.serve(async (req) => {
   try {
     if (body.action === 'vapid') return json({ publicKey: (await vapidKeys()).publicKey });
     if (body.action === 'send') return await sendNotice(body);
+    if (body.action === 'chore_done') return await choreDone(body);
+    if (body.action === 'chore_review') return await choreReview(body);
     return await calendar(body);
   } catch (e) {
     console.error(e);
@@ -192,6 +198,101 @@ async function runReminders() {
     sent += res.sent;
   }
   return { checked: (all || []).length, due: due.length, sent };
+}
+
+// ------------------------------------------------------------------
+// Heimilisverk
+// ------------------------------------------------------------------
+const first = (name) => String(name || '').split(' ')[0];
+
+async function loadLog(db, id) {
+  const { data: log, error } = await db.from('chore_log').select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  if (!log) return null;
+  const [{ data: chore }, { data: kid }] = await Promise.all([
+    db.from('chores').select('title, emoji, points').eq('id', log.chore_id).maybeSingle(),
+    db.from('profiles').select('id, name').eq('id', log.profile_id).maybeSingle(),
+  ]);
+  return { ...log, chore, kid };
+}
+
+async function choreDone({ log_id }) {
+  const db = admin();
+  const log = await loadLog(db, log_id);
+  if (!log || log.status !== 'pending') return json({ ok: true, sent: 0 });
+  const { data: parents } = await db.from('profiles').select('id').eq('role', 'parent');
+  let sent = 0;
+  for (const p of parents || []) {
+    const r = await pushTo(db, p.id, {
+      title: `👀 ${first(log.kid?.name)} kláraði verk`,
+      body: `${log.chore?.emoji || ''} ${log.chore?.title || ''} — samþykkja?`.trim(),
+      tag: 'chore-' + log.id,
+      url: './',
+    });
+    sent += r.sent;
+  }
+  return json({ ok: true, sent });
+}
+
+async function choreReview({ log_id, approve, by }) {
+  const db = admin();
+  const { data: parent } = await db.from('profiles').select('id, name, role').eq('id', by).maybeSingle();
+  if (!parent || parent.role !== 'parent') return json({ error: 'parents_only' }, 403);
+  const log = await loadLog(db, log_id);
+  if (!log) return json({ ok: true, gone: true });
+
+  const what = `${log.chore?.emoji || ''} ${log.chore?.title || ''}`.trim();
+  if (approve) {
+    const up = await db.from('chore_log').update({ status: 'approved', approved_by: parent.id }).eq('id', log.id);
+    if (up.error) throw up.error;
+    await pushTo(db, log.profile_id, { title: `⭐ +${log.points} stig!`, body: `${first(parent.name)} samþykkti: ${what}`, tag: 'chore-' + log.id, url: './' });
+  } else {
+    const del = await db.from('chore_log').delete().eq('id', log.id);
+    if (del.error) throw del.error;
+    await pushTo(db, log.profile_id, { title: '🔁 Ekki alveg búið', body: `${first(parent.name)}: ${what} — reyndu aftur 🙂`, tag: 'chore-' + log.id, url: './' });
+  }
+  return json({ ok: true });
+}
+
+const addDaysIso = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+
+// Mánudagsmorgunn kl. 08 eða seinna: tilkynna sigurvegara síðustu viku (einu sinni)
+export function lastWeek(now) {
+  const monday = addDaysIso(now.day, -((now.weekday + 6) % 7));
+  return { from: addDaysIso(monday, -7), to: addDaysIso(monday, -1) };
+}
+
+export function winnersOf(rows, kids) {
+  const totals = Object.fromEntries(kids.map((k) => [k.id, 0]));
+  for (const r of rows) if (r.profile_id in totals) totals[r.profile_id] += r.points;
+  const best = Math.max(0, ...Object.values(totals));
+  return { best, ids: best > 0 ? Object.keys(totals).filter((id) => totals[id] === best) : [] };
+}
+
+async function announceWinner() {
+  const now = icelandNow();
+  if (now.weekday !== 1 || now.minutes < 8 * 60) return null;
+  const db = admin();
+  const week = lastWeek(now);
+  const key = 'winner-' + week.from;
+  const mark = await db.from('app_settings').insert({ key, value: { at: new Date().toISOString() } });
+  if (mark.error) return null;                                   // þegar tilkynnt
+
+  const { data: kids } = await db.from('profiles').select('id, name').eq('role', 'child');
+  const { data: rows, error } = await db.from('chore_log').select('profile_id, points')
+    .eq('status', 'approved').gte('day', week.from).lte('day', week.to);
+  if (error) throw error;
+  const w = winnersOf(rows || [], kids || []);
+  if (!w.ids.length) return { none: true };
+  const names = w.ids.map((id) => first(kids.find((k) => k.id === id)?.name));
+  const who = names.length > 1 ? names.slice(0, -1).join(', ') + ' og ' + names.at(-1) : names[0];
+  await pushTo(db, null, {
+    title: '🏆 Sigurvegari vikunnar!',
+    body: `${who} ${names.length > 1 ? 'unnu' : 'vann'} vikuna með ${w.best} stigum. Bikarinn flytur!`,
+    tag: key,
+    url: './',
+  });
+  return { winners: w.ids, points: w.best };
 }
 
 // ------------------------------------------------------------------

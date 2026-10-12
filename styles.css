@@ -253,6 +253,61 @@ main { padding: 4px 16px calc(env(safe-area-inset-bottom) + 96px); display: flex
 .zoom { display: flex; align-items: center; gap: 10px; color: var(--muted); font-weight: 700; }
 .zoom input { flex: 1; padding: 0; border: 0; background: none; accent-color: var(--accent); }
 
+/* ---------- Heimilisverk ---------- */
+.chore-list { list-style: none; margin: 2px 0 8px; padding: 0; }
+.chore-list li + li { border-top: 1px solid var(--line); }
+.chore-btn { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 0; min-height: 50px; }
+.chore-btn:disabled { cursor: default; }
+.chore-emoji { font-size: 22px; width: 30px; text-align: center; flex: none; }
+.chore-title { flex: 1; font-weight: 600; min-width: 0; }
+.pts { flex: none; font-size: 14px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.pts.got { background: color-mix(in srgb, var(--good) 16%, var(--card)); color: var(--good); }
+.pts.wait { background: #FEF3C7; color: #92400E; }
+@media (prefers-color-scheme: dark) { .pts.wait { background: #3A2E12; color: #FCD34D; } }
+.chore.done .chore-title { color: var(--muted); text-decoration: line-through; }
+.chore.taken { opacity: .55; }
+.chore:not(.done):not(.pending):not(.taken) .chore-btn:active { transform: scale(.98); }
+.my-score { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 15px; padding-top: 8px; border-top: 1px solid var(--line); }
+
+.board { background: linear-gradient(160deg, #FFF7DB, var(--card) 55%); }
+@media (prefers-color-scheme: dark) { .board { background: linear-gradient(160deg, #3A3212, var(--card) 55%); } }
+.board-list { list-style: none; margin: 6px 0 4px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.board-list li { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 14px; background: color-mix(in srgb, var(--card) 70%, transparent); }
+.board-list li.me { box-shadow: inset 0 0 0 2px var(--accent); }
+.board-list li:first-child .board-name { font-size: 18px; }
+.medal { width: 28px; text-align: center; font-size: 20px; font-weight: 700; color: var(--muted); }
+.board-name { flex: 1; font-weight: 700; }
+.board-pts { font-size: 16px; text-align: right; }
+.board-foot { margin-top: 6px; }
+.trophy-wrap { position: relative; display: inline-block; }
+.trophy-badge { position: absolute; right: -6px; bottom: -4px; font-size: 15px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.3)); }
+
+.approvals { border: 2px solid #F59E0B; }
+.approve-list { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.approve-list li { display: flex; align-items: center; gap: 10px; }
+.approve-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.round-btn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 18px; font-weight: 800; flex: none; }
+.round-btn.yes { background: var(--good); color: #fff; }
+.round-btn.no { background: var(--line); color: var(--muted); }
+.round-btn:active { transform: scale(.92); }
+
+.kid-today { list-style: none; margin: 4px 0 6px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.kid-today li { display: flex; align-items: center; gap: 10px; }
+.kid-name { width: 64px; font-weight: 700; }
+.mini-chores { flex: 1; display: flex; gap: 4px; flex-wrap: wrap; }
+.mini-chore { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-size: 16px; background: var(--line); filter: grayscale(1); opacity: .6; }
+.mini-chore.ok { background: color-mix(in srgb, var(--good) 22%, var(--card)); filter: none; opacity: 1; }
+.mini-chore.wait { background: #FEF3C7; filter: none; opacity: 1; }
+.mini-chore.other { opacity: .3; }
+#manage-chores { width: 100%; }
+
+.emoji-title { display: flex; gap: 10px; }
+.emoji-field { width: 72px; flex: none; }
+.emoji-field input { text-align: center; font-size: 22px; padding: 9px 4px; }
+.emoji-title .field:last-child { flex: 1; }
+.pick-chip { cursor: pointer; font: inherit; font-size: 14px; color: var(--ink); }
+.pick-chip.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
 /* ---------- Áminningar ---------- */
 .reminders { border: 2px solid color-mix(in srgb, var(--accent) 22%, transparent); }
 .rem-list { list-style: none; margin: 2px 0 10px; padding: 0; }

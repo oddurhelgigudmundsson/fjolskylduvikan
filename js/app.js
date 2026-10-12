@@ -1,7 +1,7 @@
 import { createBackend } from './data.js';
 import { CALENDAR_FUNCTION } from './config.js';
 
-const APP_VERSION = 'fv-v13';
+const APP_VERSION = 'fv-v14';
 import {
   DAYS, DAYS_SHORT, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -24,6 +24,8 @@ const state = {
   calFilter: 'allir',
   notices: [],
   reminders: [],
+  chores: [],
+  choreLogs: [],                  // síðasta vika + þessi vika
   remDone: new Set(),             // 'reminderId|profileId' fyrir daginn í dag
   unsub: [],
 };
@@ -68,7 +70,7 @@ async function startProfiles() {
 async function startMain() {
   state.calFilter = store.get('fv.calfilter') || 'allir';
   renderShell();
-  await Promise.all([loadItems(), loadMeals(), loadNotices(), loadReminders()]);
+  await Promise.all([loadItems(), loadMeals(), loadNotices(), loadReminders(), loadChores()]);
   renderView();
   loadEvents().then(() => refreshIf(['home', 'cal']));
   syncPush();
@@ -80,6 +82,8 @@ async function startMain() {
     state.backend.subscribe('notifications', async () => { await loadNotices(); refreshIf(['home']); }),
     state.backend.subscribe('reminders', async () => { await loadReminders(); refreshIf(['home']); }),
     state.backend.subscribe('reminder_done', async () => { await loadReminders(); refreshIf(['home']); }),
+    state.backend.subscribe('chores', async () => { await loadChores(); refreshIf(['home', 'chores']); }),
+    state.backend.subscribe('chore_log', async () => { await loadChores(); refreshIf(['home', 'chores']); }),
   ];
 }
 
@@ -91,7 +95,7 @@ setInterval(() => {
 // Síminn vaknar (app opnað aftur af heimaskjá) → sækja nýjustu gögn
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible' || !state.me) return;
-  await Promise.all([loadItems(), loadMeals(), reloadProfiles(), loadNotices(), loadReminders()]);
+  await Promise.all([loadItems(), loadMeals(), reloadProfiles(), loadNotices(), loadReminders(), loadChores()]);
   renderView();
   await loadEvents();
   refreshIf(['home', 'cal']);
@@ -356,12 +360,14 @@ function demoNote() {
 const ICONS = {
   home: '<svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>',
   shop: '<svg viewBox="0 0 24 24"><path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h9.2a1 1 0 0 0 1-.8L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/></svg>',
+  chores: '<svg viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4"/></svg>',
   cal: '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
   menu: '<svg viewBox="0 0 24 24"><path d="M7 3v8m-3-8v5a3 3 0 0 0 6 0V3M7 11v10M17 21V3c-2.2 0-4 2.7-4 7s1.8 4 4 4"/></svg>',
 };
 const TABS = [
   { id: 'home', label: 'Heim' },
   { id: 'cal', label: 'Dagatal' },
+  { id: 'chores', label: 'Verk' },
   { id: 'shop', label: 'Innkaup' },
   { id: 'menu', label: 'Matseðill' },
 ];
@@ -399,7 +405,7 @@ function go(tab) {
 function renderView() {
   const view = document.getElementById('view');
   if (!view) return;
-  ({ home: renderHome, cal: renderCal, shop: renderShop, menu: renderMenu }[state.tab])(view);
+  ({ home: renderHome, cal: renderCal, chores: renderChores, shop: renderShop, menu: renderMenu }[state.tab])(view);
   const open = state.items.filter((i) => !i.checked).length;
   const badge = app.querySelector('[data-badge="shop"]');
   if (badge) badge.textContent = open ? String(open) : '';
@@ -423,6 +429,7 @@ function renderHome(view) {
     ${noticesCard()}
     ${pushPromptCard()}
     ${remindersCard()}
+    ${isParent() ? approvalsCard() : myChoresCard()}
     ${todayCard()}
 
     <button class="card tap tonight" data-go="menu">
@@ -442,11 +449,12 @@ function renderHome(view) {
         ? `<div class="chips">${open.slice(0, 6).map((i) => `<span class="chip">${esc(i.name)}</span>`).join('')}${open.length > 6 ? `<span class="chip more">+${open.length - 6}</span>` : ''}</div>`
         : '<p class="muted">Listinn er tómur. Vel gert! 🎉</p>'}
     </button>
-    <p class="coming">Heimilisverk koma í næstu útgáfu ✨</p>`;
+    `;
 
   view.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
   bindEvents(view);
   view.querySelector('#push-yes')?.addEventListener('click', enablePush);
+  bindChoreButtons(view);
   view.querySelector('#rem-add')?.addEventListener('click', () => openReminderSheet());
   view.querySelector('#rem-all')?.addEventListener('click', openAllReminders);
   view.querySelectorAll('[data-rem-done]').forEach((b) => b.addEventListener('click', () => toggleRemDone(b.dataset.remDone)));
@@ -944,6 +952,364 @@ async function savePhoto(photo) {
     console.error(e);
     toast(e.code === 'no_column' ? 'Það þarf að uppfæra gagnagrunninn fyrst (2-myndir.sql)' : 'Gat ekki vistað myndina — athugaðu netið');
   }
+}
+
+// ------------------------------------------------------------------
+// Heimilisverk og stigatafla
+// ------------------------------------------------------------------
+const kids = () => state.profiles.filter((p) => p.role === 'child');
+const mondayIso = (d = new Date()) => iso(startOfWeek(d));
+const weekDays = (monIso) => [0, 1, 2, 3, 4, 5, 6].map((n) => iso(addDays(fromIso(monIso), n)));
+
+async function loadChores() {
+  const lastMon = iso(addDays(startOfWeek(new Date()), -7));
+  const sun = iso(addDays(startOfWeek(new Date()), 6));
+  try {
+    const [chores, logs] = await Promise.all([state.backend.listChores(), state.backend.listChoreLogs(lastMon, sun)]);
+    state.chores = chores || [];
+    state.choreLogs = logs || [];
+  } catch (e) { state.chores = []; state.choreLogs = []; }   // töflurnar ekki til ennþá
+}
+
+const choreOn = (c, dayIso) => (c.repeat_days || []).includes(fromIso(dayIso).getDay());
+const choreFor = (c, kidId) => !(c.to_ids || []).length || c.to_ids.includes(kidId);
+const choresToday = (kidId, day = todayIso()) => state.chores.filter((c) => choreOn(c, day) && choreFor(c, kidId));
+const logOf = (c, kidId, day = todayIso()) => state.choreLogs.find((l) => l.chore_id === c.id && l.day === day && l.profile_id === kidId);
+const takenBy = (c, day = todayIso()) => (c.mode === 'anyone' ? state.choreLogs.find((l) => l.chore_id === c.id && l.day === day) : null);
+
+function weekTotals(monIso) {
+  const days = new Set(weekDays(monIso));
+  const t = Object.fromEntries(kids().map((k) => [k.id, { points: 0, pending: 0, count: 0 }]));
+  for (const l of state.choreLogs) {
+    if (!days.has(l.day) || !t[l.profile_id]) continue;
+    if (l.status === 'approved') { t[l.profile_id].points += l.points; t[l.profile_id].count++; }
+    else t[l.profile_id].pending += l.points;
+  }
+  return t;
+}
+
+function leaderboard(monIso = mondayIso()) {
+  const t = weekTotals(monIso);
+  return kids().map((k) => ({ kid: k, ...t[k.id] })).sort((a, b) => b.points - a.points || a.kid.sort - b.kid.sort);
+}
+
+// Bikarhafi = efstur síðustu viku (fleiri ef jafnt)
+function trophyHolders() {
+  const rows = leaderboard(iso(addDays(startOfWeek(new Date()), -7)));
+  const best = rows[0]?.points || 0;
+  return best > 0 ? { ids: rows.filter((r) => r.points === best).map((r) => r.kid.id), points: best } : { ids: [], points: 0 };
+}
+
+const withTrophy = (p, size) => `<span class="trophy-wrap">${avatar(p, size)}${trophyHolders().ids.includes(p.id) ? '<span class="trophy-badge" title="Bikarhafi">🏆</span>' : ''}</span>`;
+// Jöfn stig = sama sæti
+const rankIn = (rows, pts) => 1 + rows.filter((r) => r.points > pts).length;
+const rankOf = (kidId) => { const rows = leaderboard(); return rankIn(rows, rows.find((r) => r.kid.id === kidId)?.points || 0); };
+
+function choreRow(c, kidId, { compact = false } = {}) {
+  const log = logOf(c, kidId);
+  const other = !log && takenBy(c);
+  const otherName = other ? firstName(profileById(other.profile_id)?.name || '') : '';
+  let right;
+  if (log?.status === 'approved') right = `<span class="pts got">+${log.points} ⭐</span>`;
+  else if (log) right = '<span class="pts wait">Bíður 👀</span>';
+  else if (other) right = `<span class="muted small">${esc(otherName)} tók það</span>`;
+  else right = `<span class="pts">${c.points} ⭐</span>`;
+  const canUndo = log && !log.approved_by;
+  const clickable = (!log && !other) || canUndo;
+  return `
+    <li class="chore ${log ? (log.status === 'approved' ? 'done' : 'pending') : ''} ${other ? 'taken' : ''}">
+      <button class="chore-btn" ${clickable ? `data-chore="${esc(c.id)}"` : 'disabled'}
+        aria-label="${esc(c.title)}${log ? ' — búið' : ''}">
+        <span class="chore-emoji">${esc(c.emoji)}</span>
+        <span class="chore-title">${esc(c.title)}${!compact && c.mode === 'anyone' && !log && !other ? '<span class="muted small"> · fyrstur fær</span>' : ''}</span>
+        ${right}
+      </button>
+    </li>`;
+}
+
+function myChoresCard() {
+  if (state.me.role !== 'child' || !state.chores.length) return '';
+  const list = choresToday(state.me.id);
+  const todo = list.filter((c) => !logOf(c, state.me.id) && !takenBy(c));
+  const pending = list.filter((c) => logOf(c, state.me.id)?.status === 'pending');
+  const t = weekTotals(mondayIso())[state.me.id] || { points: 0 };
+  const rank = rankOf(state.me.id);
+  return `
+    <section class="card chores-card">
+      <div class="card-head">
+        <div class="card-label">🧹 Verkin mín í dag</div>
+        <button class="link small" data-go="chores">Stigatafla ›</button>
+      </div>
+      ${todo.length || pending.length
+        ? `<ul class="chore-list">${[...todo, ...pending].map((c) => choreRow(c, state.me.id, { compact: true })).join('')}</ul>`
+        : `<p class="muted">${list.length ? 'Öll verkin búin í dag! 💪' : 'Engin verk í dag.'}</p>`}
+      <div class="my-score">
+        ${trophyHolders().ids.includes(state.me.id) ? '<span>🏆 Þú ert með bikarinn!</span>' : ''}
+        <span><strong>${t.points} ⭐</strong> í vikunni${t.points ? ` · ${rank}. sæti` : ''}</span>
+      </div>
+    </section>`;
+}
+
+function approvalsCard() {
+  const pending = state.choreLogs.filter((l) => l.status === 'pending' && l.day >= iso(addDays(new Date(), -7)));
+  if (!pending.length) return '';
+  return `
+    <section class="card approvals">
+      <div class="card-label">👀 Bíður samþykkis (${pending.length})</div>
+      <ul class="approve-list">${pending.map((l) => {
+        const c = state.chores.find((x) => x.id === l.chore_id);
+        const k = profileById(l.profile_id);
+        return `<li>${avatar(k, 'sm')}
+          <div class="approve-text"><strong>${esc(c ? c.emoji + ' ' + c.title : 'Verk')}</strong>
+            <span class="muted small">${esc(firstName(k?.name || ''))} · ${l.points} ⭐${l.day !== todayIso() ? ' · ' + esc(DAYS_SHORT[fromIso(l.day).getDay()]) : ''}</span></div>
+          <button class="round-btn no" data-review="${esc(l.id)}" data-ok="0" aria-label="Ekki samþykkja">✕</button>
+          <button class="round-btn yes" data-review="${esc(l.id)}" data-ok="1" aria-label="Samþykkja">✓</button></li>`;
+      }).join('')}</ul>
+    </section>`;
+}
+
+function bindChoreButtons(root) {
+  root.querySelectorAll('[data-chore]').forEach((b) => b.addEventListener('click', () => toggleChore(b.dataset.chore)));
+  root.querySelectorAll('[data-review]').forEach((b) => b.addEventListener('click', () => reviewChore(b.dataset.review, b.dataset.ok === '1')));
+}
+
+async function toggleChore(choreId) {
+  const c = state.chores.find((x) => x.id === choreId);
+  if (!c || state.me.role !== 'child') return;
+  const log = logOf(c, state.me.id);
+  if (log) {                                         // hætta við (ef foreldri hefur ekki samþykkt)
+    if (log.approved_by) return;
+    state.choreLogs = state.choreLogs.filter((l) => l.id !== log.id);
+    renderView();
+    try { await state.backend.deleteChoreLog(log.id); } catch { toast('Gat ekki vistað'); await loadChores(); renderView(); }
+    return;
+  }
+  if (takenBy(c)) return toast('Einhver var á undan þér 😅');
+  const row = { chore_id: c.id, profile_id: state.me.id, day: todayIso(), status: c.needs_approval ? 'pending' : 'approved', points: c.points };
+  const temp = { ...row, id: 'tmp-' + Date.now(), approved_by: null };
+  state.choreLogs.push(temp);
+  renderView();
+  try {
+    const id = await state.backend.addChoreLog(row);
+    temp.id = id;
+    if (row.status === 'pending') {
+      toast('Sent til samþykkis 👀');
+      state.backend.choreDone(id).catch(() => {});
+    } else {
+      toast(`+${c.points} ⭐ Vel gert!`);
+    }
+  } catch (e) {
+    console.error(e);
+    toast(c.mode === 'anyone' ? 'Einhver var á undan þér 😅' : 'Gat ekki vistað — athugaðu netið');
+  }
+  await loadChores(); renderView();
+}
+
+async function reviewChore(logId, approve) {
+  if (!isParent()) return;
+  const log = state.choreLogs.find((l) => l.id === logId);
+  if (!log) return;
+  if (approve) Object.assign(log, { status: 'approved', approved_by: state.me.id });
+  else state.choreLogs = state.choreLogs.filter((l) => l.id !== logId);
+  renderView();
+  try {
+    await state.backend.choreReview(logId, approve, state.me.id);
+    toast(approve ? `Samþykkt ✓ (+${log.points} ⭐ til ${firstName(profileById(log.profile_id)?.name || '')})` : 'Sent til baka 🔁');
+  } catch (e) {
+    console.error(e);
+    toast('Gat ekki vistað — athugaðu netið');
+    await loadChores(); renderView();
+  }
+}
+
+function renderChores(view) {
+  if (!state.chores.length && state.backend.mode === 'live' && !isParent()) {
+    view.innerHTML = `<section class="hero compact"><h1>Verk</h1></section>
+      <div class="empty"><div class="empty-mark">🧹</div><p>Engin verk ennþá</p></div>`;
+    return;
+  }
+  const mon = mondayIso();
+  const rows = leaderboard(mon);
+  const medals = ['🥇', '🥈', '🥉'];
+  const holders = trophyHolders();
+  const holderNames = holders.ids.map((id) => firstName(profileById(id)?.name || ''));
+
+  const board = `
+    <section class="card board">
+      <div class="card-head">
+        <div class="card-label">🏆 Stigatafla vikunnar</div>
+        <span class="muted small">${esc(weekRange(fromIso(mon)))}</span>
+      </div>
+      <ol class="board-list">${rows.map((r, i) => `
+        <li class="${r.kid.id === state.me.id ? 'me' : ''}">
+          <span class="medal">${r.points ? (medals[rankIn(rows, r.points) - 1] || `${rankIn(rows, r.points)}.`) : '–'}</span>
+          ${withTrophy(r.kid, '')}
+          <span class="board-name">${esc(firstName(r.kid.name))}</span>
+          <span class="board-pts"><strong>${r.points}</strong> ⭐${r.pending ? `<span class="muted small"> +${r.pending} bíða</span>` : ''}</span>
+        </li>`).join('')}</ol>
+      <p class="muted small board-foot">${holders.ids.length
+        ? `🏆 Bikarinn: ${esc(holderNames.join(' og '))} (${holders.points} stig síðustu viku)`
+        : 'Sá sem er efstur á sunnudagskvöld fær bikarinn 🏆'}</p>
+    </section>`;
+
+  let mine = '';
+  if (state.me.role === 'child') {
+    const list = choresToday(state.me.id);
+    mine = `
+      <section class="card">
+        <div class="card-label">🧹 Verkin mín í dag</div>
+        ${list.length ? `<ul class="chore-list">${list.map((c) => choreRow(c, state.me.id)).join('')}</ul>` : '<p class="muted">Engin verk í dag 🎉</p>'}
+        <p class="muted small">Ýttu á verk þegar það er búið. Stærri verk þarf mamma eða pabbi að samþykkja.</p>
+      </section>`;
+  }
+
+  let parentView = '';
+  if (isParent()) {
+    const today = kids().map((k) => {
+      const list = choresToday(k.id);
+      const done = list.filter((c) => logOf(c, k.id)?.status === 'approved').length;
+      const icons = list.map((c) => {
+        const l = logOf(c, k.id), o = !l && takenBy(c);
+        const st = l ? (l.status === 'approved' ? 'ok' : 'wait') : o ? 'other' : 'todo';
+        return `<span class="mini-chore ${st}" title="${esc(c.title)}">${esc(c.emoji)}</span>`;
+      }).join('');
+      return `<li>${avatar(k, 'sm')}<span class="kid-name">${esc(firstName(k.name))}</span>
+        <span class="mini-chores">${icons}</span><span class="muted small">${done}/${list.length}</span></li>`;
+    }).join('');
+    parentView = `
+      ${approvalsCard()}
+      <section class="card">
+        <div class="card-label">📋 Staðan í dag</div>
+        <ul class="kid-today">${today}</ul>
+        <p class="muted small">✓ grænt = búið · 👀 gult = bíður samþykkis · grátt = ekki búið</p>
+      </section>
+      <button class="btn big" id="manage-chores">⚙️ Sýsla með verkin</button>`;
+  }
+
+  view.innerHTML = `
+    <section class="hero compact"><h1>Verk</h1></section>
+    ${board}
+    ${mine}
+    ${parentView}`;
+  bindChoreButtons(view);
+  view.querySelector('#manage-chores')?.addEventListener('click', openChoreList);
+}
+
+function daysSummary(days) {
+  const d = WEEK_ORDER.filter((x) => (days || []).includes(x));
+  const key = d.join(',');
+  if (d.length === 7) return 'Alla daga';
+  if (key === '1,2,3,4,5') return 'Virka daga';
+  if (key === '6,0') return 'Um helgar';
+  const names = d.map((x) => DAYS_ACC[x]);
+  const s = names.length > 1 ? names.slice(0, -1).join(', ') + ' og ' + names.at(-1) : names[0] || '';
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function openChoreList() {
+  const s = openSheet(`
+    <h2>⚙️ Verkin</h2>
+    <ul class="rem-all">${state.chores.map((c) => {
+      const who = (c.to_ids || []).length ? c.to_ids.map((id) => firstName(profileById(id)?.name || '')).join(', ') : 'Öll börnin';
+      return `<li><button data-edit-chore="${esc(c.id)}">
+        <span class="rem-body">${esc(c.emoji)} ${esc(c.title)} <span class="pts">${c.points} ⭐</span></span>
+        <span class="muted small">${esc(daysSummary(c.repeat_days))} · ${esc(who)} · ${c.mode === 'anyone' ? 'fyrstur fær' : 'hver og einn'}${c.needs_approval ? ' · samþykki' : ''}</span>
+      </button></li>`;
+    }).join('')}</ul>
+    <div class="sheet-actions">
+      <button class="btn primary" id="new-chore">＋ Nýtt verk</button>
+      <button class="btn" data-close>Loka</button>
+    </div>`);
+  s.el.querySelector('#new-chore').addEventListener('click', () => { s.close(); setTimeout(() => openChoreEditor(null), 230); });
+  s.el.querySelectorAll('[data-edit-chore]').forEach((b) => b.addEventListener('click', () => {
+    s.close(); setTimeout(() => openChoreEditor(state.chores.find((c) => c.id === b.dataset.editChore)), 230);
+  }));
+}
+
+function openChoreEditor(existing) {
+  const c = existing || { emoji: '🧹', points: 5, mode: 'each', needs_approval: false, to_ids: [], repeat_days: [0, 1, 2, 3, 4, 5, 6] };
+  let mode = c.mode;
+  let points = c.points;
+  let days = new Set(c.repeat_days);
+  let to = new Set(c.to_ids || []);
+  const POINTS = [2, 3, 5, 10, 15, 20, 30];
+  const s = openSheet(`
+    <h2>${existing ? 'Breyta verki' : 'Nýtt verk'}</h2>
+    <div class="emoji-title">
+      <label class="field emoji-field"><span>Tákn</span><input id="ch-emoji" maxlength="4" value="${esc(c.emoji)}"></label>
+      <label class="field"><span>Verk</span><input id="ch-title" maxlength="60" value="${esc(c.title || '')}" placeholder="t.d. Vökva blómin"></label>
+    </div>
+    <div class="card-label">Stig</div>
+    <div class="chips" id="ch-points">${POINTS.map((p) => `<button class="chip pick-chip ${p === points ? 'on' : ''}" data-points="${p}">${p} ⭐</button>`).join('')}</div>
+    <div class="card-label">Hver gerir það?</div>
+    <div class="segmented">
+      <button data-mode="each" class="${mode === 'each' ? 'on' : ''}">Hver og einn</button>
+      <button data-mode="anyone" class="${mode === 'anyone' ? 'on' : ''}">Fyrstur fær</button>
+    </div>
+    <div class="filters wrap" id="ch-to">
+      <button class="filter ${to.size ? '' : 'on'}" data-to="all" style="--c:var(--accent)"><span>Öll börnin</span></button>
+      ${kids().map((k) => `<button class="filter ${to.has(k.id) ? 'on' : ''}" data-to="${esc(k.id)}" style="--c:${esc(k.color)}">${avatar(k, 'sm')}<span>${esc(firstName(k.name))}</span></button>`).join('')}
+    </div>
+    <div class="card-label">Hvenær</div>
+    <div class="day-chips">${WEEK_ORDER.map((d) => `<button class="day-chip ${days.has(d) ? 'on' : ''}" data-day="${d}">${DAYS_SHORT[d]}</button>`).join('')}</div>
+    <div class="chips quick-days">
+      <button class="chip quick" data-preset="all">Alla daga</button>
+      <button class="chip quick" data-preset="week">Virka daga</button>
+      <button class="chip quick" data-preset="weekend">Um helgar</button>
+    </div>
+    <label class="toggle-row"><input type="checkbox" id="ch-approve" ${c.needs_approval ? 'checked' : ''}><span>Foreldri þarf að samþykkja</span></label>
+    <div class="sheet-actions">
+      <button class="btn primary big" id="ch-save">Vista</button>
+      ${existing ? '<button class="btn danger-text" id="ch-del">Eyða verki</button>' : ''}
+      <button class="btn" data-close>Hætta við</button>
+    </div>`);
+  const el = s.el;
+  el.querySelectorAll('[data-points]').forEach((b) => b.addEventListener('click', () => {
+    points = Number(b.dataset.points);
+    el.querySelectorAll('[data-points]').forEach((x) => x.classList.toggle('on', x === b));
+  }));
+  el.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => {
+    mode = b.dataset.mode;
+    el.querySelectorAll('[data-mode]').forEach((x) => x.classList.toggle('on', x === b));
+  }));
+  const paintTo = () => el.querySelectorAll('[data-to]').forEach((b) =>
+    b.classList.toggle('on', b.dataset.to === 'all' ? !to.size : to.has(b.dataset.to)));
+  el.querySelectorAll('[data-to]').forEach((b) => b.addEventListener('click', () => {
+    const id = b.dataset.to;
+    if (id === 'all') to.clear(); else if (to.has(id)) to.delete(id); else to.add(id);
+    if (to.size === kids().length) to.clear();
+    paintTo();
+  }));
+  const paintDays = () => el.querySelectorAll('[data-day]').forEach((b) => b.classList.toggle('on', days.has(Number(b.dataset.day))));
+  el.querySelectorAll('[data-day]').forEach((b) => b.addEventListener('click', () => {
+    const d = Number(b.dataset.day);
+    if (days.has(d)) days.delete(d); else days.add(d);
+    paintDays();
+  }));
+  el.querySelectorAll('[data-preset]').forEach((b) => b.addEventListener('click', () => {
+    days = new Set({ all: [0, 1, 2, 3, 4, 5, 6], week: [1, 2, 3, 4, 5], weekend: [6, 0] }[b.dataset.preset]);
+    paintDays();
+  }));
+  el.querySelector('#ch-save').addEventListener('click', async () => {
+    const title = el.querySelector('#ch-title').value.trim();
+    if (!title) { el.querySelector('#ch-title').focus(); return toast('Skrifaðu heiti á verkinu'); }
+    if (!days.size) return toast('Veldu að minnsta kosti einn dag');
+    const row = {
+      ...(existing ? { id: existing.id } : { sort: state.chores.length + 1 }),
+      title, emoji: el.querySelector('#ch-emoji').value.trim() || '🧹', points, mode,
+      needs_approval: el.querySelector('#ch-approve').checked,
+      to_ids: [...to], repeat_days: [...days].sort(),
+    };
+    try {
+      await state.backend.saveChore(row);
+      await loadChores(); s.close(); renderView();
+      toast(existing ? 'Verk uppfært' : 'Nýtt verk komið 🧹');
+    } catch (e) { console.error(e); toast('Gat ekki vistað — er búið að keyra 5-heimilisverk.sql?'); }
+  });
+  el.querySelector('#ch-del')?.addEventListener('click', async () => {
+    try { await state.backend.deleteChore(existing.id); await loadChores(); s.close(); renderView(); toast('Verki eytt'); }
+    catch { toast('Gat ekki eytt'); }
+  });
 }
 
 // ------------------------------------------------------------------

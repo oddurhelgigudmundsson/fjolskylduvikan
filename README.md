@@ -69,5 +69,9 @@ A fixed "📌 Áminningar" card sits at the top of everyone's home screen and sh
 - With a time set, a push notification goes to that person's phone at that time. A scheduler in the database (`pg_cron`) calls `clever-api` every 5 minutes with a secret key, and each reminder is sent at most once a day. Reminders already ticked off are skipped.
 - Database: run `supabase/4-aminningar.sql` once.
 
-## Next stages
-1. Chores with points, approvals, streaks and a reward shop.
+## Chores and the weekly trophy (Verk)
+- The **Verk** tab shows the weekly leaderboard (Monday to Sunday, kids only). Tied scores share a place. Whoever tops last week's board gets 🏆 on their avatar, and the real trophy goes to their room. On Monday at 08:00 everyone gets a notification saying who won.
+- Kids see "Verkin mín í dag" on their home screen and tap a chore when it's done. Small chores give points straight away. Bigger chores (`needs_approval`) wait for a parent, who gets a notification and approves (✓) or sends it back (✕) from the home screen. The kid then gets a notification either way.
+- Each chore is either `each` (everyone does their own, like making the bed) or `anyone` (first one to do it gets the points, like taking out the trash). Each chore also has its points, its weekdays, and optionally which kids it's for.
+- Parents manage chores under **⚙️ Sýsla með verkin**.
+- Database: run `supabase/5-heimilisverk.sql` once. It also adds the six starter chores.

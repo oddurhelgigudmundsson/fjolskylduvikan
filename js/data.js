@@ -64,6 +64,21 @@ async function supabaseBackend() {
         user_agent: navigator.userAgent.slice(0, 200), updated_at: new Date().toISOString(),
       }, { onConflict: 'endpoint' }));
     },
+    async listChores() { return ok(await sb.from('chores').select('*').order('sort').order('created_at')); },
+    async saveChore(c) {
+      const { id, ...row } = c;
+      if (id) ok(await sb.from('chores').update(row).eq('id', id));
+      else ok(await sb.from('chores').insert(row));
+    },
+    async deleteChore(id) { ok(await sb.from('chores').delete().eq('id', id)); },
+    async listChoreLogs(from, to) {
+      return ok(await sb.from('chore_log').select('*').gte('day', from).lte('day', to));
+    },
+    async addChoreLog(row) { return ok(await sb.from('chore_log').insert(row).select('id').single()).id; },
+    async deleteChoreLog(id) { ok(await sb.from('chore_log').delete().eq('id', id)); },
+    async choreDone(logId) { return callFn({ action: 'chore_done', log_id: logId }); },
+    async choreReview(logId, approve, by) { return callFn({ action: 'chore_review', log_id: logId, approve, by }); },
+
     async listReminders() { return ok(await sb.from('reminders').select('*').order('created_at')); },
     async saveReminder(r) {
       const { id, ...row } = r;
@@ -173,6 +188,42 @@ function demoBackend() {
       commit('notifications');
       return { ok: true, sent: 0, devices: 0 };
     },
+    async listChores() {
+      const d = read();
+      if (!d.chores) { d.chores = demoChores(); d.clog = demoChoreLog(d.chores); write(); }
+      return clone(d.chores);
+    },
+    async saveChore(c) {
+      const list = (read().chores ||= []);
+      const i = c.id ? list.findIndex((x) => x.id === c.id) : -1;
+      if (i >= 0) list[i] = { ...list[i], ...c };
+      else list.push({ ...c, id: uid(), sort: list.length + 1 });
+      commit('chores');
+    },
+    async deleteChore(id) {
+      read().chores = (read().chores || []).filter((x) => x.id !== id);
+      read().clog = (read().clog || []).filter((x) => x.chore_id !== id);
+      commit('chores');
+    },
+    async listChoreLogs(from, to) { return clone((read().clog || []).filter((l) => l.day >= from && l.day <= to)); },
+    async addChoreLog(row) {
+      const d = read();
+      if ((d.clog ||= []).some((l) => l.chore_id === row.chore_id && l.day === row.day && l.profile_id === row.profile_id)) throw new Error('dup');
+      const id = uid();
+      d.clog.push({ id, approved_by: null, created_at: new Date().toISOString(), ...row });
+      commit('chore_log');
+      return id;
+    },
+    async deleteChoreLog(id) { read().clog = (read().clog || []).filter((l) => l.id !== id); commit('chore_log'); },
+    async choreDone() { return { ok: true, sent: 0 }; },
+    async choreReview(logId, approve, by) {
+      const d = read();
+      if (approve) { const l = d.clog.find((x) => x.id === logId); if (l) Object.assign(l, { status: 'approved', approved_by: by }); }
+      else d.clog = d.clog.filter((x) => x.id !== logId);
+      commit('chore_log');
+      return { ok: true };
+    },
+
     async listReminders() {
       const d = read();
       if (!d.reminders) { d.reminders = demoReminders(); write(); }
@@ -220,6 +271,45 @@ function demoBackend() {
 export function uid() {
   if (globalThis.crypto?.randomUUID) return crypto.randomUUID();
   return 'id-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function demoChores() {
+  const all = [0, 1, 2, 3, 4, 5, 6];
+  const c = (title, emoji, points, mode, needs_approval, repeat_days, sort) =>
+    ({ id: uid(), title, emoji, points, mode, needs_approval, to_ids: [], repeat_days, sort });
+  const today = new Date().getDay();
+  return [
+    c('Búa um rúmið', '🛏️', 5, 'each', false, all, 1),
+    c('Draga frá gluggunum', '🪟', 3, 'each', false, all, 2),
+    c('Taka til í herberginu', '🧸', 15, 'each', true, [3, 0, today], 3),
+    c('Ryksuga herbergið sitt', '🧹', 15, 'each', true, [6], 4),
+    c('Fara út með ruslið', '🗑️', 10, 'anyone', true, all, 5),
+    c('Taka úr uppþvottavélinni', '🍽️', 10, 'anyone', true, all, 6),
+  ];
+}
+
+// Smá saga svo stigataflan sé ekki tóm í prufuham
+function demoChoreLog(chores) {
+  const out = [];
+  const monday = new Date(); monday.setHours(12, 0, 0, 0);
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  const dayIso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const kids = { alma: [1, 1, 1, 0, 1, 0], thelma: [1, 0, 1, 1, 0, 1], petur: [1, 1, 0, 0, 1, 0] };
+  for (let back = 1; back <= 7; back++) {                     // síðasta vika
+    const d = new Date(monday); d.setDate(d.getDate() - back);
+    for (const [kid, pattern] of Object.entries(kids)) {
+      chores.forEach((ch, i) => {
+        if (!pattern[i] || (back + i + kid.length) % 3 === 0) return;
+        if (ch.mode === 'anyone' && out.some((l) => l.chore_id === ch.id && l.day === dayIso(d))) return;
+        out.push({ id: uid(), chore_id: ch.id, profile_id: kid, day: dayIso(d), status: 'approved', points: ch.points, approved_by: 'oddur' });
+      });
+    }
+  }
+  const today = dayIso(new Date());
+  out.push({ id: uid(), chore_id: chores[0].id, profile_id: 'alma', day: today, status: 'approved', points: 5, approved_by: null });
+  out.push({ id: uid(), chore_id: chores[4].id, profile_id: 'thelma', day: today, status: 'pending', points: 10, approved_by: null });
+  out.push({ id: uid(), chore_id: chores[0].id, profile_id: 'thelma', day: today, status: 'approved', points: 5, approved_by: null });
+  return out;
 }
 
 function demoReminders() {
