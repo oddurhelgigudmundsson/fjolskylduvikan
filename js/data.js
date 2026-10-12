@@ -64,6 +64,19 @@ async function supabaseBackend() {
         user_agent: navigator.userAgent.slice(0, 200), updated_at: new Date().toISOString(),
       }, { onConflict: 'endpoint' }));
     },
+    async listReminders() { return ok(await sb.from('reminders').select('*').order('created_at')); },
+    async saveReminder(r) {
+      const { id, ...row } = r;
+      if (id) ok(await sb.from('reminders').update(row).eq('id', id));
+      else ok(await sb.from('reminders').insert(row));
+    },
+    async deleteReminder(id) { ok(await sb.from('reminders').delete().eq('id', id)); },
+    async listDone(day) { return ok(await sb.from('reminder_done').select('reminder_id, profile_id').eq('day', day)); },
+    async setDone(reminder_id, day, profile_id, done) {
+      if (done) ok(await sb.from('reminder_done').upsert({ reminder_id, day, profile_id }, { onConflict: 'reminder_id,day,profile_id' }));
+      else ok(await sb.from('reminder_done').delete().match({ reminder_id, day, profile_id }));
+    },
+
     async listNotices(since) {
       return ok(await sb.from('notifications').select('*').gte('created_at', since).order('created_at', { ascending: false }).limit(20));
     },
@@ -160,6 +173,30 @@ function demoBackend() {
       commit('notifications');
       return { ok: true, sent: 0, devices: 0 };
     },
+    async listReminders() {
+      const d = read();
+      if (!d.reminders) { d.reminders = demoReminders(); write(); }
+      return clone(d.reminders);
+    },
+    async saveReminder(r) {
+      const list = (read().reminders ||= []);
+      const i = r.id ? list.findIndex((x) => x.id === r.id) : -1;
+      if (i >= 0) list[i] = { ...list[i], ...r };
+      else list.push({ ...r, id: uid(), created_at: new Date().toISOString() });
+      commit('reminders');
+    },
+    async deleteReminder(id) {
+      read().reminders = (read().reminders || []).filter((x) => x.id !== id);
+      commit('reminders');
+    },
+    async listDone(day) { return clone((read().rdone || []).filter((x) => x.day === day)); },
+    async setDone(reminder_id, day, profile_id, done) {
+      const d = read();
+      d.rdone = (d.rdone || []).filter((x) => !(x.reminder_id === reminder_id && x.day === day && x.profile_id === profile_id));
+      if (done) d.rdone.push({ reminder_id, day, profile_id });
+      commit('reminder_done');
+    },
+
     async listNotices(since) {
       return clone((read().notices || []).filter((n) => n.created_at >= since).reverse());
     },
@@ -183,6 +220,19 @@ function demoBackend() {
 export function uid() {
   if (globalThis.crypto?.randomUUID) return crypto.randomUUID();
   return 'id-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function demoReminders() {
+  const today = new Date().getDay();
+  const r = (to_id, body, repeat_days, remind_at, created_by = 'oddur') =>
+    ({ id: uid(), to_id, body, repeat_days, once_date: null, remind_at, created_by, created_at: new Date().toISOString() });
+  return [
+    r('petur', 'Sunddót í skólann 🏊', [5], '07:30:00'),
+    r('petur', 'Takkaskór á æfingu ⚽', [1, 3, today], '15:30:00'),
+    r('alma', 'Fimleikaföt í töskuna 🤸', [2, 4, today], '07:30:00', 'kristin'),
+    r('thelma', 'Æfa píanó 🎹', [1, 2, 3, 4, 5], null, 'thelma'),
+    r(null, 'Taka ruslið út 🗑️', [today], '19:00:00', 'kristin'),
+  ];
 }
 
 function demoEvents() {

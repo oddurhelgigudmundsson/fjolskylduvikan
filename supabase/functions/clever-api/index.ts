@@ -2,6 +2,8 @@
 // 1) Dagatal: les Google-dagatöl fjölskyldunnar (leynileg iCal-slóð) og skilar
 //    viðburðum á tilteknu tímabili, merktum þeim sem þeir tilheyra.
 // 2) Tilkynningar: foreldrar senda skilaboð á einn eða alla (Web Push).
+// 3) Áminningar: klukka í gagnagrunninum (pg_cron) kallar hér á 5 mín fresti
+//    og áminningar sem eiga að fara núna eru sendar í síma viðkomandi.
 //
 // Leyndarmál (Supabase → Edge Functions → Secrets):
 //   ICAL_HEIMILID  – leynileg iCal-slóð "Heimilið"
@@ -39,6 +41,19 @@ const json = (body, status = 200) =>
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+
+  // Klukkan (pg_cron) — notar eigin lykil, ekki innskráningu
+  const cronKey = req.headers.get('x-cron-key');
+  if (cronKey) {
+    try {
+      const { data } = await admin().from('app_settings').select('value').eq('key', 'cron').maybeSingle();
+      if (!data?.value?.key || data.value.key !== cronKey) return json({ error: 'forbidden' }, 403);
+      return json(await runReminders());
+    } catch (e) {
+      console.error(e);
+      return json({ error: 'server_error', detail: String(e?.message || e) }, 500);
+    }
+  }
 
   // Aðeins innskráður fjölskylduaðgangur kemst að
   const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
@@ -95,23 +110,30 @@ async function sendNotice({ from, to, body }) {
   const saved = await db.from('notifications').insert({ from_id: sender.id, to_id: toId, body: text }).select('id').single();
   if (saved.error) throw saved.error;
 
-  let q = db.from('push_subscriptions').select('*');
-  if (toId) q = q.eq('profile_id', toId);
-  const { data: subs, error } = await q;
-  if (error) throw error;
-
-  const keys = await vapidKeys();
-  webpush.setVapidDetails('mailto:oddurhelgi@gmail.com', keys.publicKey, keys.privateKey);
-  const payload = JSON.stringify({
+  const res = await pushTo(db, toId, {
     title: sender.name.split(' ')[0],
     body: text,
     tag: 'fv-' + saved.data.id,
     url: './',
   });
+  return json({ ok: true, ...res });
+}
+
+// Senda á síma eins aðila (toId) eða allra (null). Skilar { sent, devices }.
+async function pushTo(db, toId, message) {
+  let q = db.from('push_subscriptions').select('*');
+  if (toId) q = q.eq('profile_id', toId);
+  const { data: subs, error } = await q;
+  if (error) throw error;
+  if (!subs?.length) return { sent: 0, devices: 0 };
+
+  const keys = await vapidKeys();
+  webpush.setVapidDetails('mailto:oddurhelgi@gmail.com', keys.publicKey, keys.privateKey);
+  const payload = JSON.stringify(message);
 
   let sent = 0;
   const gone = [];
-  await Promise.all((subs || []).map(async (s) => {
+  await Promise.all(subs.map(async (s) => {
     try {
       await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 60 * 60 * 12, urgency: 'high' });
       sent++;
@@ -121,8 +143,55 @@ async function sendNotice({ from, to, body }) {
     }
   }));
   if (gone.length) await db.from('push_subscriptions').delete().in('endpoint', gone);
+  return { sent, devices: subs.length };
+}
 
-  return json({ ok: true, sent, devices: (subs || []).length });
+// ------------------------------------------------------------------
+// Áminningar
+// ------------------------------------------------------------------
+export function icelandNow(date = new Date()) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Atlantic/Reykjavik', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(date).map((p) => [p.type, p.value]));
+  const day = `${parts.year}-${parts.month}-${parts.day}`;
+  return {
+    day,
+    weekday: new Date(day + 'T12:00:00Z').getUTCDay(),
+    minutes: Number(parts.hour) * 60 + Number(parts.minute),
+  };
+}
+
+const toMinutes = (t) => { const [h, m] = String(t).split(':').map(Number); return h * 60 + m; };
+
+export function isDue(r, now, windowMin = 30) {
+  if (!r.remind_at) return false;
+  const today = r.once_date ? r.once_date === now.day : (r.repeat_days || []).includes(now.weekday);
+  if (!today) return false;
+  const at = toMinutes(r.remind_at);
+  return at <= now.minutes && at > now.minutes - windowMin;   // ekki gamlar áminningar ef einhver bætir við seint
+}
+
+async function runReminders() {
+  const db = admin();
+  const now = icelandNow();
+  const { data: all, error } = await db.from('reminders').select('*').not('remind_at', 'is', null);
+  if (error) throw error;
+  const due = (all || []).filter((r) => isDue(r, now));
+  if (!due.length) return { checked: (all || []).length, sent: 0 };
+
+  const { data: done } = await db.from('reminder_done').select('reminder_id, profile_id').eq('day', now.day);
+  const doneSet = new Set((done || []).map((d) => d.reminder_id + '|' + d.profile_id));
+
+  let sent = 0;
+  for (const r of due) {
+    if (r.to_id && doneSet.has(r.id + '|' + r.to_id)) continue;           // þegar búið
+    const mark = await db.from('reminder_pushes').insert({ reminder_id: r.id, day: now.day });
+    if (mark.error) continue;                                              // þegar sent í dag
+    const res = await pushTo(db, r.to_id, { title: '📌 Áminning', body: r.body, tag: 'rem-' + r.id + '-' + now.day, url: './' });
+    sent += res.sent;
+  }
+  return { checked: (all || []).length, due: due.length, sent };
 }
 
 // ------------------------------------------------------------------

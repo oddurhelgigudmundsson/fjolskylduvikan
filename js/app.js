@@ -1,7 +1,7 @@
 import { createBackend } from './data.js';
 import { CALENDAR_FUNCTION } from './config.js';
 
-const APP_VERSION = 'fv-v11';
+const APP_VERSION = 'fv-v12';
 import {
   DAYS, DAYS_SHORT, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -23,6 +23,8 @@ const state = {
   calFailed: [],
   calFilter: 'allir',
   notices: [],
+  reminders: [],
+  remDone: new Set(),             // 'reminderId|profileId' fyrir daginn í dag
   unsub: [],
 };
 
@@ -66,7 +68,7 @@ async function startProfiles() {
 async function startMain() {
   state.calFilter = store.get('fv.calfilter') || 'allir';
   renderShell();
-  await Promise.all([loadItems(), loadMeals(), loadNotices()]);
+  await Promise.all([loadItems(), loadMeals(), loadNotices(), loadReminders()]);
   renderView();
   loadEvents().then(() => refreshIf(['home', 'cal']));
   syncPush();
@@ -76,6 +78,8 @@ async function startMain() {
     state.backend.subscribe('shopping_items', async () => { await loadItems(); refreshIf(['home', 'shop']); }),
     state.backend.subscribe('meals', async () => { await loadMeals(); refreshIf(['home', 'menu']); }),
     state.backend.subscribe('notifications', async () => { await loadNotices(); refreshIf(['home']); }),
+    state.backend.subscribe('reminders', async () => { await loadReminders(); refreshIf(['home']); }),
+    state.backend.subscribe('reminder_done', async () => { await loadReminders(); refreshIf(['home']); }),
   ];
 }
 
@@ -87,7 +91,7 @@ setInterval(() => {
 // Síminn vaknar (app opnað aftur af heimaskjá) → sækja nýjustu gögn
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible' || !state.me) return;
-  await Promise.all([loadItems(), loadMeals(), reloadProfiles(), loadNotices()]);
+  await Promise.all([loadItems(), loadMeals(), reloadProfiles(), loadNotices(), loadReminders()]);
   renderView();
   await loadEvents();
   refreshIf(['home', 'cal']);
@@ -418,6 +422,7 @@ function renderHome(view) {
 
     ${noticesCard()}
     ${pushPromptCard()}
+    ${remindersCard()}
     ${todayCard()}
 
     <button class="card tap tonight" data-go="menu">
@@ -442,6 +447,9 @@ function renderHome(view) {
   view.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
   bindEvents(view);
   view.querySelector('#push-yes')?.addEventListener('click', enablePush);
+  view.querySelector('#rem-add')?.addEventListener('click', () => openReminderSheet());
+  view.querySelector('#rem-all')?.addEventListener('click', openAllReminders);
+  view.querySelectorAll('[data-rem-done]').forEach((b) => b.addEventListener('click', () => toggleRemDone(b.dataset.remDone)));
   view.querySelectorAll('[data-dismiss]').forEach((b) => b.addEventListener('click', () => {
     dismissNotice(b.dataset.dismiss);
     renderView();
@@ -936,6 +944,218 @@ async function savePhoto(photo) {
     console.error(e);
     toast(e.code === 'no_column' ? 'Það þarf að uppfæra gagnagrunninn fyrst (2-myndir.sql)' : 'Gat ekki vistað myndina — athugaðu netið');
   }
+}
+
+// ------------------------------------------------------------------
+// Áminningar
+// ------------------------------------------------------------------
+const DAYS_ACC = ['sunnudaga', 'mánudaga', 'þriðjudaga', 'miðvikudaga', 'fimmtudaga', 'föstudaga', 'laugardaga'];
+const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];                   // mánudagur fyrst
+
+async function loadReminders() {
+  try {
+    const [list, done] = await Promise.all([state.backend.listReminders(), state.backend.listDone(todayIso())]);
+    state.reminders = list || [];
+    state.remDone = new Set((done || []).map((d) => d.reminder_id + '|' + d.profile_id));
+  } catch (e) { state.reminders = []; }       // töflurnar ekki til ennþá
+}
+
+const remOn = (r, dayIso) => (r.once_date ? r.once_date === dayIso : (r.repeat_days || []).includes(fromIso(dayIso).getDay()));
+const remTime = (r) => (r.remind_at ? String(r.remind_at).slice(0, 5) : '');
+const canEditRem = (r) => isParent() || r.created_by === state.me.id;
+const remIsDone = (r) => state.remDone.has(r.id + '|' + state.me.id);
+
+function remSummary(r) {
+  let when;
+  if (r.once_date) {
+    const t = todayIso(), tm = iso(addDays(new Date(), 1));
+    when = r.once_date === t ? 'Í dag' : r.once_date === tm ? 'Á morgun' : longDate(fromIso(r.once_date));
+  } else {
+    const d = WEEK_ORDER.filter((x) => (r.repeat_days || []).includes(x));
+    const key = d.join(',');
+    if (d.length === 7) when = 'Alla daga';
+    else if (key === '1,2,3,4,5') when = 'Virka daga';
+    else if (key === '6,0') when = 'Um helgar';
+    else {
+      const names = d.map((x) => DAYS_ACC[x]);
+      when = names.length > 1 ? names.slice(0, -1).join(', ') + ' og ' + names.at(-1) : names[0] || '';
+      when = when.charAt(0).toUpperCase() + when.slice(1);
+    }
+  }
+  return remTime(r) ? `${when} kl. ${remTime(r)}` : when;
+}
+
+function remindersCard() {
+  const today = todayIso();
+  const mine = state.reminders
+    .filter((r) => (!r.to_id || r.to_id === state.me.id) && remOn(r, today))
+    .sort((a, b) => (remIsDone(a) - remIsDone(b)) || (remTime(a) || '00').localeCompare(remTime(b) || '00'));
+  return `
+    <section class="card reminders">
+      <div class="card-head">
+        <div class="card-label">📌 Áminningar</div>
+        <button class="link small" id="rem-all">Allar ›</button>
+      </div>
+      ${mine.length ? `<ul class="rem-list">${mine.map((r) => {
+        const done = remIsDone(r);
+        return `<li class="${done ? 'done' : ''}">
+          <button class="rem-check" data-rem-done="${esc(r.id)}" aria-label="${done ? 'Ekki búið' : 'Búið'}: ${esc(r.body)}">
+            <span class="box">${done ? '✓' : ''}</span>
+            <span class="rem-text"><span class="rem-body">${esc(r.body)}</span>
+              ${remTime(r) || !r.to_id ? `<span class="muted small">${remTime(r) ? 'kl. ' + esc(remTime(r)) : ''}${remTime(r) && !r.to_id ? ' · ' : ''}${!r.to_id ? 'öll fjölskyldan' : ''}</span>` : ''}</span>
+          </button></li>`;
+      }).join('')}</ul>` : '<p class="muted">Engar áminningar í dag.</p>'}
+      <button class="btn add-rem" id="rem-add">＋ Ný áminning</button>
+    </section>`;
+}
+
+async function toggleRemDone(id) {
+  const key = id + '|' + state.me.id;
+  const done = !state.remDone.has(key);
+  if (done) state.remDone.add(key); else state.remDone.delete(key);
+  renderView();
+  try { await state.backend.setDone(id, todayIso(), state.me.id, done); }
+  catch { toast('Gat ekki vistað — athugaðu netið'); await loadReminders(); renderView(); }
+}
+
+function openReminderSheet(existing = null, onClose = null) {
+  const r = existing || {};
+  const editing = Boolean(existing);
+  let to = editing ? (r.to_id || 'allir') : state.me.id;
+  let mode = r.once_date ? 'once' : 'repeat';
+  let days = new Set(editing ? (r.repeat_days || []) : [new Date().getDay()]);
+  const pushOn = editing ? Boolean(r.remind_at) : true;
+
+  const people = isParent()
+    ? `<div class="card-label">Fyrir hvern</div>
+       <div class="filters wrap" id="rem-to">
+         <button class="filter ${to === 'allir' ? 'on' : ''}" data-to="allir" style="--c:var(--accent)"><span class="avatar sm" style="--c:var(--accent)">👨‍👩‍👧‍👦</span><span>Allir</span></button>
+         ${state.profiles.map((p) => `<button class="filter ${to === p.id ? 'on' : ''}" data-to="${esc(p.id)}" style="--c:${esc(p.color)}">${avatar(p, 'sm')}<span>${esc(p.id === state.me.id ? 'Ég' : firstName(p.name))}</span></button>`).join('')}
+       </div>` : '';
+
+  const s = openSheet(`
+    <h2>${editing ? 'Breyta áminningu' : '📌 Ný áminning'}</h2>
+    <label class="field"><span>Hvað á að muna?</span>
+      <input id="rem-body" maxlength="120" value="${esc(r.body || '')}" placeholder="t.d. Sunddót í skólann"></label>
+    ${people}
+    <div class="card-label">Hvenær</div>
+    <div class="segmented" role="tablist">
+      <button data-mode="repeat" class="${mode === 'repeat' ? 'on' : ''}">Endurtekið</button>
+      <button data-mode="once" class="${mode === 'once' ? 'on' : ''}">Einu sinni</button>
+    </div>
+    <div id="rem-repeat" ${mode === 'repeat' ? '' : 'hidden'}>
+      <div class="day-chips">${WEEK_ORDER.map((d) => `<button class="day-chip ${days.has(d) ? 'on' : ''}" data-day="${d}">${DAYS_SHORT[d]}</button>`).join('')}</div>
+      <div class="chips quick-days">
+        <button class="chip quick" data-preset="all">Alla daga</button>
+        <button class="chip quick" data-preset="week">Virka daga</button>
+        <button class="chip quick" data-preset="weekend">Um helgar</button>
+      </div>
+    </div>
+    <div id="rem-once" ${mode === 'once' ? '' : 'hidden'}>
+      <input type="date" id="rem-date" value="${esc(r.once_date || todayIso())}" min="${todayIso()}">
+    </div>
+    <label class="toggle-row">
+      <input type="checkbox" id="rem-push" ${pushOn ? 'checked' : ''}>
+      <span>Senda tilkynningu í símann kl.</span>
+      <input type="time" id="rem-time" value="${esc(remTime(r) || '07:30')}">
+    </label>
+    <div class="sheet-actions">
+      <button class="btn primary big" id="rem-save">Vista</button>
+      ${editing && canEditRem(r) ? '<button class="btn danger-text" id="rem-del">Eyða áminningu</button>' : ''}
+      <button class="btn" data-close>Hætta við</button>
+    </div>`);
+
+  const el = s.el;
+  const close = () => { s.close(); if (onClose) setTimeout(onClose, 230); };
+  el.querySelectorAll('[data-to]').forEach((b) => b.addEventListener('click', () => {
+    to = b.dataset.to;
+    el.querySelectorAll('[data-to]').forEach((x) => x.classList.toggle('on', x === b));
+  }));
+  el.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => {
+    mode = b.dataset.mode;
+    el.querySelectorAll('[data-mode]').forEach((x) => x.classList.toggle('on', x === b));
+    el.querySelector('#rem-repeat').hidden = mode !== 'repeat';
+    el.querySelector('#rem-once').hidden = mode !== 'once';
+  }));
+  const paintDays = () => el.querySelectorAll('[data-day]').forEach((b) => b.classList.toggle('on', days.has(Number(b.dataset.day))));
+  el.querySelectorAll('[data-day]').forEach((b) => b.addEventListener('click', () => {
+    const d = Number(b.dataset.day);
+    if (days.has(d)) days.delete(d); else days.add(d);
+    paintDays();
+  }));
+  el.querySelectorAll('[data-preset]').forEach((b) => b.addEventListener('click', () => {
+    days = new Set({ all: [0, 1, 2, 3, 4, 5, 6], week: [1, 2, 3, 4, 5], weekend: [6, 0] }[b.dataset.preset]);
+    paintDays();
+  }));
+  const timeInput = el.querySelector('#rem-time');
+  const pushBox = el.querySelector('#rem-push');
+  const syncTime = () => { timeInput.disabled = !pushBox.checked; };
+  pushBox.addEventListener('change', syncTime); syncTime();
+
+  el.querySelector('#rem-save').addEventListener('click', async () => {
+    const body = el.querySelector('#rem-body').value.trim();
+    if (!body) { el.querySelector('#rem-body').focus(); return toast('Skrifaðu hvað á að muna'); }
+    if (mode === 'repeat' && !days.size) return toast('Veldu að minnsta kosti einn dag');
+    const date = el.querySelector('#rem-date').value;
+    if (mode === 'once' && !date) return toast('Veldu dag');
+    const row = {
+      ...(editing ? { id: r.id } : { created_by: state.me.id }),
+      to_id: isParent() ? (to === 'allir' ? null : to) : state.me.id,
+      body,
+      repeat_days: mode === 'repeat' ? [...days].sort() : [],
+      once_date: mode === 'once' ? date : null,
+      remind_at: pushBox.checked && timeInput.value ? timeInput.value : null,
+    };
+    try {
+      await state.backend.saveReminder(row);
+      await loadReminders();
+      close(); renderView();
+      toast(editing ? 'Áminning uppfærð' : 'Áminning komin 📌');
+    } catch (e) {
+      console.error(e);
+      toast('Gat ekki vistað — er búið að uppfæra gagnagrunninn (4-aminningar.sql)?');
+    }
+  });
+  el.querySelector('#rem-del')?.addEventListener('click', async () => {
+    try {
+      await state.backend.deleteReminder(r.id);
+      await loadReminders();
+      close(); renderView(); toast('Áminningu eytt');
+    } catch { toast('Gat ekki eytt'); }
+  });
+  if (!editing) setTimeout(() => el.querySelector('#rem-body').focus(), 250);
+}
+
+function openAllReminders() {
+  const today = todayIso();
+  const visible = state.reminders.filter((r) =>
+    (isParent() || !r.to_id || r.to_id === state.me.id) && !(r.once_date && r.once_date < today));
+  const groups = [
+    { id: null, label: 'Öll fjölskyldan', icon: '<span class="avatar sm" style="--c:var(--accent)">👨‍👩‍👧‍👦</span>' },
+    ...state.profiles.map((p) => ({ id: p.id, label: p.name, icon: avatar(p, 'sm') })),
+  ].map((g) => ({ ...g, list: visible.filter((r) => (r.to_id || null) === g.id) })).filter((g) => g.list.length);
+
+  const s = openSheet(`
+    <h2>📌 Áminningar</h2>
+    ${groups.length ? groups.map((g) => `
+      <section class="rem-group">
+        <div class="rem-group-head">${g.icon}<strong>${esc(g.label)}</strong></div>
+        <ul class="rem-all">${g.list.map((r) => `
+          <li><button data-edit="${esc(r.id)}" ${canEditRem(r) ? '' : 'disabled'}>
+            <span class="rem-body">${esc(r.body)}</span>
+            <span class="muted small">${esc(remSummary(r))}</span>
+          </button></li>`).join('')}</ul>
+      </section>`).join('') : '<p class="muted">Engar áminningar ennþá.</p>'}
+    <div class="sheet-actions">
+      <button class="btn primary" id="rem-new">＋ Ný áminning</button>
+      <button class="btn" data-close>Loka</button>
+    </div>`);
+  s.el.querySelector('#rem-new').addEventListener('click', () => { s.close(); setTimeout(() => openReminderSheet(null, openAllReminders), 230); });
+  s.el.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => {
+    const r = state.reminders.find((x) => x.id === b.dataset.edit);
+    if (!r || !canEditRem(r)) return;
+    s.close(); setTimeout(() => openReminderSheet(r, openAllReminders), 230);
+  }));
 }
 
 // ------------------------------------------------------------------

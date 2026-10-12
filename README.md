@@ -61,5 +61,13 @@ Oddur and Kristín see a **＋** next to their avatar on the home screen. From t
 - Database: run `supabase/3-tilkynningar.sql` once.
 - iPhone: needs iOS 16.4 or newer, and the app must be opened from the home screen. Each person taps "Kveikja á tilkynningum" once.
 
+## Reminders (Áminningar)
+A fixed "📌 Áminningar" card sits at the top of everyone's home screen and shows today's reminders for that person (plus family-wide ones). Each person ticks a reminder off as done for the day.
+
+- Anyone can add reminders for themselves. Oddur and Kristín can also add them for a child or for the whole family.
+- A reminder repeats on chosen weekdays (every day, weekdays, weekends, or specific days), or happens once on a given date.
+- With a time set, a push notification goes to that person's phone at that time. A scheduler in the database (`pg_cron`) calls `clever-api` every 5 minutes with a secret key, and each reminder is sent at most once a day. Reminders already ticked off are skipped.
+- Database: run `supabase/4-aminningar.sql` once.
+
 ## Next stages
 1. Chores with points, approvals, streaks and a reward shop.

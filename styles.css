@@ -253,6 +253,39 @@ main { padding: 4px 16px calc(env(safe-area-inset-bottom) + 96px); display: flex
 .zoom { display: flex; align-items: center; gap: 10px; color: var(--muted); font-weight: 700; }
 .zoom input { flex: 1; padding: 0; border: 0; background: none; accent-color: var(--accent); }
 
+/* ---------- Áminningar ---------- */
+.reminders { border: 2px solid color-mix(in srgb, var(--accent) 22%, transparent); }
+.rem-list { list-style: none; margin: 2px 0 10px; padding: 0; }
+.rem-list li { border-top: 1px solid var(--line); }
+.rem-list li:first-child { border-top: 0; }
+.rem-check { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 0; min-height: 48px; }
+.rem-text { display: flex; flex-direction: column; min-width: 0; }
+.rem-body { font-weight: 600; }
+.rem-list li.done .box { background: var(--good); border-color: var(--good); }
+.rem-list li.done .rem-body { color: var(--muted); text-decoration: line-through; }
+.add-rem { width: 100%; min-height: 42px; }
+.segmented { display: flex; background: var(--card); border-radius: 12px; padding: 3px; box-shadow: var(--shadow); }
+.segmented button { flex: 1; text-align: center; padding: 9px 0; border-radius: 10px; font-weight: 600; color: var(--muted); }
+.segmented button.on { background: var(--accent); color: var(--accent-ink); }
+.day-chips { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.day-chip {
+  text-align: center; padding: 10px 0; border-radius: 12px; font-weight: 700; font-size: 14px;
+  background: var(--card); box-shadow: var(--shadow); color: var(--muted);
+}
+.day-chip.on { background: var(--accent); color: var(--accent-ink); }
+.quick-days { margin-top: 8px; }
+.toggle-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-weight: 600; }
+.toggle-row input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--accent); flex: none; }
+.toggle-row input[type=time] { width: auto; padding: 8px 10px; }
+.toggle-row input[type=time]:disabled { opacity: .4; }
+#rem-once input { width: auto; }
+.rem-group { display: flex; flex-direction: column; gap: 6px; }
+.rem-group-head { display: flex; align-items: center; gap: 8px; }
+.rem-all { list-style: none; margin: 0; padding: 0; background: var(--card); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+.rem-all li + li { border-top: 1px solid var(--line); }
+.rem-all button { width: 100%; display: flex; flex-direction: column; padding: 10px 14px; }
+.rem-all button:disabled { cursor: default; }
+
 /* ---------- Tilkynningar ---------- */
 .top-actions { display: flex; align-items: center; gap: 10px; }
 .send-btn {
