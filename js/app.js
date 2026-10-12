@@ -1,7 +1,7 @@
 import { createBackend } from './data.js';
 import { CALENDAR_FUNCTION } from './config.js';
 
-const APP_VERSION = 'fv-v5';
+const APP_VERSION = 'fv-v6';
 import {
   DAYS, DAYS_SHORT, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -383,8 +383,6 @@ function renderHome(view) {
   const greet = now.getHours() < 18 ? 'Góðan daginn' : 'Gott kvöld';
   const tonight = state.meals[todayIso()];
   const open = state.items.filter((i) => !i.checked);
-  const week = startOfWeek(now);
-  const rest = [1, 2, 3, 4, 5, 6].map((n) => addDays(now, n)).filter((d) => d <= addDays(week, 6));
 
   view.innerHTML = `
     <section class="hero">
@@ -411,19 +409,6 @@ function renderHome(view) {
         ? `<div class="chips">${open.slice(0, 6).map((i) => `<span class="chip">${esc(i.name)}</span>`).join('')}${open.length > 6 ? `<span class="chip more">+${open.length - 6}</span>` : ''}</div>`
         : '<p class="muted">Listinn er tómur. Vel gert! 🎉</p>'}
     </button>
-
-    ${rest.length ? `
-    <section class="card">
-      <div class="card-label">📅 Restin af vikunni</div>
-      <ul class="week-mini">
-        ${rest.map((d) => {
-          const m = state.meals[iso(d)];
-          return `<li><span class="day">${DAYS_SHORT[d.getDay()]}</span>
-            <span class="${m ? '' : 'muted'}">${m ? esc(m.title) : 'Ekkert ákveðið'}</span></li>`;
-        }).join('')}
-      </ul>
-    </section>` : ''}
-
     <p class="coming">Heimilisverk og tilkynningar koma í næstu útgáfu ✨</p>`;
 
   view.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
