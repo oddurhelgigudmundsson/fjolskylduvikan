@@ -647,3 +647,17 @@ input:focus, textarea:focus { box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc
 .sheet { border-radius: 12px 12px 0 0; background: var(--bg); }
 #toast { border-radius: 6px; background: #2F2F2F; color: #fff; font-weight: 500; }
 .pad button { box-shadow: var(--shadow-sm); }
+
+/* Horn: 4px alls staðar (nema hringlaga myndir, PIN-takkar og merkið á flipunum) */
+:root { --radius: 4px; }
+.card, .items, .rem-all, .wish, .event, .kudos-list.wall .kudos,
+.btn, .icon-btn, .send-btn, .round-btn, .add-form .btn,
+input, textarea, .segmented, .segmented button, .filter, .day-chip,
+.pill, .chip, .pts, .badge, .emoji-pick button, .react, .mini-chore,
+.thumb, .photo-preview, .photo-full, .demo-banner, #toast, .board-list li,
+.menu-list > button, .day-card, .sheet, .del, .notice-close, .crop canvas,
+.react-count, .later-list li, .tonight, .board, .approvals, .kudos-card, .photos-card, .notices, .push-prompt {
+  border-radius: 4px;
+}
+.sheet { border-radius: 4px 4px 0 0; }
+.box { border-radius: 2px; }
