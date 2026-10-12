@@ -5,5 +5,5 @@
 //
 // Ef þetta er tómt keyrir appið í prufuham: gögn vistast bara í tækinu.
 
-export const SUPABASE_URL = '';
-export const SUPABASE_ANON_KEY = '';
+export const SUPABASE_URL = 'https://kuqxnwxcocxecxxwczqm.supabase.co';
+export const SUPABASE_ANON_KEY = 'sb_publishable__isNdG954mu5XoGnxdifiw_jta0WfpD';
