@@ -2,7 +2,7 @@ import { createBackend } from './data.js';
 import { icon } from './icons.js';
 import { CALENDAR_FUNCTION } from './config.js';
 
-const APP_VERSION = 'fv-v22';
+const APP_VERSION = 'fv-v23';
 import {
   DAYS, DAYS_SHORT, MONTHS, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -458,7 +458,7 @@ function renderHome(view) {
   view.innerHTML = `
     <section class="hero">
       <p class="eyebrow">${esc(longDate(now))}</p>
-      <h1>${greet}, ${esc(firstName(state.me.name))} ${esc(state.me.emoji)}</h1>
+      <h1>${greet}, ${esc(firstName(state.me.name))}</h1>
     </section>
 
     ${noticesCard()}
