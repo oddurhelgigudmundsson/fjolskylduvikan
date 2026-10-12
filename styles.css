@@ -267,6 +267,12 @@ main { padding: 4px 16px calc(env(safe-area-inset-bottom) + 96px); display: flex
 .notice-list { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .notice-list li { display: flex; gap: 10px; align-items: flex-start; }
 .notice-body { font-weight: 600; font-size: 17px; }
+.notice-text { flex: 1; min-width: 0; }
+.notice-close {
+  flex: none; width: 32px; height: 32px; margin: -4px -6px 0 0; border-radius: 50%;
+  font-size: 22px; line-height: 1; text-align: center; color: var(--muted);
+}
+.notice-close:active { background: var(--line); }
 .push-prompt p { margin-bottom: 10px; }
 .row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .filters.wrap { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }

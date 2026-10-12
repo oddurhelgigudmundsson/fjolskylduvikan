@@ -1,7 +1,7 @@
 import { createBackend } from './data.js';
 import { CALENDAR_FUNCTION } from './config.js';
 
-const APP_VERSION = 'fv-v9';
+const APP_VERSION = 'fv-v10';
 import {
   DAYS, DAYS_SHORT, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -442,6 +442,10 @@ function renderHome(view) {
   view.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
   bindEvents(view);
   view.querySelector('#push-yes')?.addEventListener('click', enablePush);
+  view.querySelectorAll('[data-dismiss]').forEach((b) => b.addEventListener('click', () => {
+    dismissNotice(b.dataset.dismiss);
+    renderView();
+  }));
   view.querySelector('#push-later')?.addEventListener('click', () => { store.set('fv.pushlater', String(Date.now())); renderView(); });
 }
 
@@ -954,8 +958,21 @@ function relTime(s) {
   return h < 24 ? `fyrir ${h} klst` : 'í gær';
 }
 
+// Lokuð skilaboð: geymd í símanum fyrir hvern notanda
+const dismissKey = () => 'fv.dismissed.' + state.me.id;
+function dismissed() {
+  try { return JSON.parse(store.get(dismissKey()) || '[]'); } catch { return []; }
+}
+function dismissNotice(id) {
+  const keep = new Set(state.notices.map((n) => n.id));        // gleyma gömlum sem eru horfin hvort sem er
+  const list = dismissed().filter((x) => keep.has(x));
+  list.push(id);
+  store.set(dismissKey(), JSON.stringify(list));
+}
+
 function noticesCard() {
-  const mine = state.notices.filter((n) => !n.to_id || n.to_id === state.me.id).slice(0, 3);
+  const hidden = new Set(dismissed());
+  const mine = state.notices.filter((n) => (!n.to_id || n.to_id === state.me.id) && !hidden.has(n.id)).slice(0, 3);
   if (!mine.length) return '';
   return `
     <section class="card notices">
@@ -963,8 +980,9 @@ function noticesCard() {
       <ul class="notice-list">
         ${mine.map((n) => {
           const from = profileById(n.from_id);
-          return `<li>${avatar(from, 'sm')}<div><p class="notice-body">${esc(n.body)}</p>
-            <p class="muted small">${esc(from ? firstName(from.name) : '')}${n.to_id ? ' · bara til þín' : ''} · ${esc(relTime(n.created_at))}</p></div></li>`;
+          return `<li>${avatar(from, 'sm')}<div class="notice-text"><p class="notice-body">${esc(n.body)}</p>
+            <p class="muted small">${esc(from ? firstName(from.name) : '')}${n.to_id ? ' · bara til þín' : ''} · ${esc(relTime(n.created_at))}</p></div>
+            <button class="notice-close" data-dismiss="${esc(n.id)}" aria-label="Loka skilaboðum">×</button></li>`;
         }).join('')}
       </ul>
     </section>`;
