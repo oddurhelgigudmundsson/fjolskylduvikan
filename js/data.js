@@ -15,6 +15,16 @@ async function supabaseBackend() {
     auth: { persistSession: true, autoRefreshToken: true, storageKey: 'fv.auth' },
   });
   const ok = ({ data, error }) => { if (error) throw error; return data; };
+  const callFn = async (body) => {
+    const { data, error } = await sb.functions.invoke(CALENDAR_FUNCTION || 'calendar', { body });
+    if (error) {
+      let code = 'error';
+      try { code = (await error.context?.json())?.error || code; } catch { /* ekkert */ }
+      if (error.context?.status === 404) code = 'not_setup';
+      throw Object.assign(new Error(code), { code });
+    }
+    return data;
+  };
 
   return {
     mode: 'live',
@@ -43,16 +53,19 @@ async function supabaseBackend() {
     async saveMeal(meal) { ok(await sb.from('meals').upsert(meal, { onConflict: 'day' })); },
     async deleteMeal(day) { ok(await sb.from('meals').delete().eq('day', day)); },
 
-    // Dagatal: Edge Function (sjá CALENDAR_FUNCTION í config.js) les Google-dagatölin
-    async listEvents(from, to) {
-      const { data, error } = await sb.functions.invoke(CALENDAR_FUNCTION || 'calendar', { body: { from, to } });
-      if (error) {
-        let code = 'error';
-        try { code = (await error.context?.json())?.error || code; } catch { /* ekkert */ }
-        if (error.context?.status === 404) code = 'not_setup';
-        throw Object.assign(new Error('calendar'), { code });
-      }
-      return data;
+    // Þjónninn (Edge Function, sjá CALENDAR_FUNCTION í config.js): dagatal + tilkynningar
+    async listEvents(from, to) { return callFn({ from, to }); },
+    async pushPublicKey() { return (await callFn({ action: 'vapid' })).publicKey; },
+    async sendNotice(from, to, body) { return callFn({ action: 'send', from, to, body }); },
+    async savePushSubscription(profileId, sub) {
+      const j = sub.toJSON();
+      ok(await sb.from('push_subscriptions').upsert({
+        endpoint: j.endpoint, profile_id: profileId, p256dh: j.keys.p256dh, auth: j.keys.auth,
+        user_agent: navigator.userAgent.slice(0, 200), updated_at: new Date().toISOString(),
+      }, { onConflict: 'endpoint' }));
+    },
+    async listNotices(since) {
+      return ok(await sb.from('notifications').select('*').gte('created_at', since).order('created_at', { ascending: false }).limit(20));
     },
 
     subscribe(table, cb) {
@@ -138,6 +151,17 @@ function demoBackend() {
     async deleteMeal(day) {
       read().meals = read().meals.filter((m) => m.day !== day);
       commit('meals');
+    },
+
+    async pushPublicKey() { return null; },
+    async savePushSubscription() {},
+    async sendNotice(from, to, body) {
+      (read().notices ||= []).push({ id: uid(), from_id: from, to_id: to === 'allir' ? null : to, body, created_at: new Date().toISOString() });
+      commit('notifications');
+      return { ok: true, sent: 0, devices: 0 };
+    },
+    async listNotices(since) {
+      return clone((read().notices || []).filter((n) => n.created_at >= since).reverse());
     },
 
     async listEvents(from, to) {

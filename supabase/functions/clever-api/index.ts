@@ -1,12 +1,15 @@
-// Fjölskylduvikan — dagatal
-// Supabase Edge Function sem les Google-dagatöl fjölskyldunnar (leynileg iCal-slóð)
-// og skilar viðburðum á tilteknu tímabili, merktum þeim sem þeir tilheyra.
+// Fjölskylduvikan — þjónn (Supabase Edge Function "clever-api")
+// 1) Dagatal: les Google-dagatöl fjölskyldunnar (leynileg iCal-slóð) og skilar
+//    viðburðum á tilteknu tímabili, merktum þeim sem þeir tilheyra.
+// 2) Tilkynningar: foreldrar senda skilaboð á einn eða alla (Web Push).
 //
 // Leyndarmál (Supabase → Edge Functions → Secrets):
 //   ICAL_HEIMILID  – leynileg iCal-slóð "Heimilið"
 //   ICAL_ODDUR     – leynileg iCal-slóð "Heimilið vol.2" (oddurhelgi@gmail.com)
+// Lyklar fyrir tilkynningar búa sig til sjálfir í fyrsta skipti (tafla app_settings).
 
 import ICAL from 'npm:ical.js@2.2.1';
+import webpush from 'npm:web-push@3.6.7';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 // Hvaða dagatöl eru lesin. "fallback" = hver á viðburðinn ef ekkert nafn er í titlinum.
@@ -37,21 +40,98 @@ const json = (body, status = 200) =>
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
-  // Aðeins innskráður fjölskylduaðgangur fær dagatalið
+  // Aðeins innskráður fjölskylduaðgangur kemst að
   const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
   const auth = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_ANON_KEY'));
   const { data: who, error: authError } = await auth.auth.getUser(token);
   if (authError || !who?.user) return json({ error: 'not_signed_in' }, 401);
 
-  let from, to;
+  let body;
+  try { body = await req.json(); } catch { return json({ error: 'bad_request' }, 400); }
+
   try {
-    const body = await req.json();
-    from = new Date(body.from + 'T00:00:00Z');
-    to = new Date(body.to + 'T23:59:59Z');
-    if (isNaN(from) || isNaN(to) || to - from > 62 * 86400000) throw new Error('range');
-  } catch {
-    return json({ error: 'bad_range' }, 400);
+    if (body.action === 'vapid') return json({ publicKey: (await vapidKeys()).publicKey });
+    if (body.action === 'send') return await sendNotice(body);
+    return await calendar(body);
+  } catch (e) {
+    console.error(e);
+    return json({ error: 'server_error', detail: String(e?.message || e) }, 500);
   }
+});
+
+// Þjónslykill: gefinn sjálfkrafa í öllum Supabase Edge Functions
+const admin = () => createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
+
+// ------------------------------------------------------------------
+// Tilkynningar
+// ------------------------------------------------------------------
+let cachedKeys = null;
+async function vapidKeys() {
+  if (cachedKeys) return cachedKeys;
+  const db = admin();
+  const { data, error } = await db.from('app_settings').select('value').eq('key', 'vapid').maybeSingle();
+  if (error) throw error;
+  if (data?.value?.publicKey) return (cachedKeys = data.value);
+  const keys = webpush.generateVAPIDKeys();
+  const ins = await db.from('app_settings').insert({ key: 'vapid', value: keys });
+  if (ins.error) {
+    // annað kall var á undan að búa til lykla → nota þá
+    const again = await db.from('app_settings').select('value').eq('key', 'vapid').single();
+    if (again.error) throw again.error;
+    return (cachedKeys = again.value);
+  }
+  return (cachedKeys = keys);
+}
+
+async function sendNotice({ from, to, body }) {
+  const text = String(body || '').trim().slice(0, 300);
+  if (!text) return json({ error: 'empty' }, 400);
+  const db = admin();
+
+  const { data: sender } = await db.from('profiles').select('id, name, role').eq('id', from).maybeSingle();
+  if (!sender || sender.role !== 'parent') return json({ error: 'parents_only' }, 403);
+
+  const toId = to && to !== 'allir' ? String(to) : null;
+  const saved = await db.from('notifications').insert({ from_id: sender.id, to_id: toId, body: text }).select('id').single();
+  if (saved.error) throw saved.error;
+
+  let q = db.from('push_subscriptions').select('*');
+  if (toId) q = q.eq('profile_id', toId);
+  const { data: subs, error } = await q;
+  if (error) throw error;
+
+  const keys = await vapidKeys();
+  webpush.setVapidDetails('mailto:oddurhelgi@gmail.com', keys.publicKey, keys.privateKey);
+  const payload = JSON.stringify({
+    title: sender.name.split(' ')[0],
+    body: text,
+    tag: 'fv-' + saved.data.id,
+    url: './',
+  });
+
+  let sent = 0;
+  const gone = [];
+  await Promise.all((subs || []).map(async (s) => {
+    try {
+      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 60 * 60 * 12, urgency: 'high' });
+      sent++;
+    } catch (e) {
+      if (e?.statusCode === 404 || e?.statusCode === 410) gone.push(s.endpoint);   // síminn hættur að taka við
+      else console.error('push failed', e?.statusCode, e?.body || String(e));
+    }
+  }));
+  if (gone.length) await db.from('push_subscriptions').delete().in('endpoint', gone);
+
+  return json({ ok: true, sent, devices: (subs || []).length });
+}
+
+// ------------------------------------------------------------------
+// Dagatal
+// ------------------------------------------------------------------
+async function calendar(body) {
+  const from = new Date(body.from + 'T00:00:00Z');
+  const to = new Date(body.to + 'T23:59:59Z');
+  if (isNaN(from) || isNaN(to) || to - from > 62 * 86400000) return json({ error: 'bad_range' }, 400);
 
   const feeds = FEEDS.map((f) => ({ ...f, url: Deno.env.get(f.secret) })).filter((f) => f.url);
   if (!feeds.length) return json({ error: 'no_calendars' }, 500);
@@ -85,7 +165,7 @@ Deno.serve(async (req) => {
 
   events.sort((a, b) => a.start.localeCompare(b.start));
   return json({ events, failed });
-});
+}
 
 export function whoIsIt(title) {
   const t = ' ' + String(title || '').toLowerCase() + ' ';

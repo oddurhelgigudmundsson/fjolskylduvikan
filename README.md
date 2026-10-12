@@ -50,10 +50,16 @@ python3 -m http.server 8000   # then open http://localhost:8000
 Bump `VERSION` in `sw.js` so phones pick up the new files, then push to `main`.
 
 ## Calendar
-The **Dagatal** tab shows the Google calendars "Heimilið" and "Heimilið vol.2", read-only. The Supabase Edge Function `supabase/functions/calendar/index.ts` fetches each calendar's secret iCal address and expands repeating events. It assigns each event to whoever is named in the title (inflected names count: Ölmu, Thelmu, Pétri, Odds). Events with no name go to the whole family (Heimilið) or to Oddur (vol.2). An event that appears in both calendars is shown once.
+The **Dagatal** tab shows the Google calendars "Heimilið" and "Heimilið vol.2", read-only. The Supabase Edge Function `supabase/functions/clever-api/index.ts` fetches each calendar's secret iCal address and expands repeating events. It assigns each event to whoever is named in the title (inflected names count: Ölmu, Thelmu, Pétri, Odds). Events with no name go to the whole family (Heimilið) or to Oddur (vol.2). An event that appears in both calendars is shown once.
 
 Setup: in Supabase **Edge Functions → Secrets**, add `ICAL_HEIMILID` and `ICAL_ODDUR` (each calendar's "Secret address in iCal format"). Then deploy the function (its name goes in `CALENDAR_FUNCTION` in `js/config.js`; currently `clever-api`) with **Verify JWT** turned off. The function checks the family login itself.
 
+## Notifications
+Oddur and Kristín see a **＋** next to their avatar on the home screen. From there they send a message to the whole family or to one person. The message arrives as a push notification on every phone that has notifications turned on, and it also shows in a "Skilaboð" card on the home screen for 24 hours.
+
+- The same function (`clever-api`) sends the notifications. Its push keys are created automatically the first time and stored in the `app_settings` table, which only the server can read.
+- Database: run `supabase/3-tilkynningar.sql` once.
+- iPhone: needs iOS 16.4 or newer, and the app must be opened from the home screen. Each person taps "Kveikja á tilkynningum" once.
+
 ## Next stages
 1. Chores with points, approvals, streaks and a reward shop.
-2. Push notifications from parents to everyone or selected people.

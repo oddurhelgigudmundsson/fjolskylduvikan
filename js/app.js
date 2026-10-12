@@ -1,7 +1,7 @@
 import { createBackend } from './data.js';
 import { CALENDAR_FUNCTION } from './config.js';
 
-const APP_VERSION = 'fv-v8';
+const APP_VERSION = 'fv-v9';
 import {
   DAYS, DAYS_SHORT, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -22,6 +22,7 @@ const state = {
   calStatus: 'idle',               // idle | loading | ok | error | not_setup
   calFailed: [],
   calFilter: 'allir',
+  notices: [],
   unsub: [],
 };
 
@@ -65,14 +66,16 @@ async function startProfiles() {
 async function startMain() {
   state.calFilter = store.get('fv.calfilter') || 'allir';
   renderShell();
-  await Promise.all([loadItems(), loadMeals()]);
+  await Promise.all([loadItems(), loadMeals(), loadNotices()]);
   renderView();
   loadEvents().then(() => refreshIf(['home', 'cal']));
+  syncPush();
 
   state.unsub.forEach((u) => u());
   state.unsub = [
     state.backend.subscribe('shopping_items', async () => { await loadItems(); refreshIf(['home', 'shop']); }),
     state.backend.subscribe('meals', async () => { await loadMeals(); refreshIf(['home', 'menu']); }),
+    state.backend.subscribe('notifications', async () => { await loadNotices(); refreshIf(['home']); }),
   ];
 }
 
@@ -84,7 +87,7 @@ setInterval(() => {
 // Síminn vaknar (app opnað aftur af heimaskjá) → sækja nýjustu gögn
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible' || !state.me) return;
-  await Promise.all([loadItems(), loadMeals(), reloadProfiles()]);
+  await Promise.all([loadItems(), loadMeals(), reloadProfiles(), loadNotices()]);
   renderView();
   await loadEvents();
   refreshIf(['home', 'cal']);
@@ -363,7 +366,10 @@ function renderShell() {
   app.innerHTML = `
     <header class="topbar">
       <div class="title">Fjölskylduvikan</div>
-      <button class="me-btn" id="me-btn" aria-label="Notandi: ${esc(state.me.name)}">${avatar(state.me)}</button>
+      <div class="top-actions">
+        ${isParent() ? `<button class="send-btn ${state.tab === 'home' ? '' : 'hidden'}" id="send-btn" aria-label="Senda tilkynningu">＋</button>` : ''}
+        <button class="me-btn" id="me-btn" aria-label="Notandi: ${esc(state.me.name)}">${avatar(state.me)}</button>
+      </div>
     </header>
     ${state.backend.mode === 'demo' ? '<div class="demo-banner">Prufuútgáfa — gögnin vistast bara í þessu tæki</div>' : ''}
     <main id="view"></main>
@@ -375,11 +381,13 @@ function renderShell() {
     </nav>`;
   app.querySelectorAll('.tabbar button').forEach((b) => b.addEventListener('click', () => go(b.dataset.tab)));
   app.querySelector('#me-btn').addEventListener('click', openMeSheet);
+  app.querySelector('#send-btn')?.addEventListener('click', openSendSheet);
 }
 
 function go(tab) {
   state.tab = tab;
   app.querySelectorAll('.tabbar button').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+  app.querySelector('#send-btn')?.classList.toggle('hidden', tab !== 'home');
   renderView();
   window.scrollTo({ top: 0 });
 }
@@ -408,6 +416,8 @@ function renderHome(view) {
       <h1>${greet}, ${esc(firstName(state.me.name))} ${esc(state.me.emoji)}</h1>
     </section>
 
+    ${noticesCard()}
+    ${pushPromptCard()}
     ${todayCard()}
 
     <button class="card tap tonight" data-go="menu">
@@ -427,10 +437,12 @@ function renderHome(view) {
         ? `<div class="chips">${open.slice(0, 6).map((i) => `<span class="chip">${esc(i.name)}</span>`).join('')}${open.length > 6 ? `<span class="chip more">+${open.length - 6}</span>` : ''}</div>`
         : '<p class="muted">Listinn er tómur. Vel gert! 🎉</p>'}
     </button>
-    <p class="coming">Heimilisverk og tilkynningar koma í næstu útgáfu ✨</p>`;
+    <p class="coming">Heimilisverk koma í næstu útgáfu ✨</p>`;
 
   view.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
   bindEvents(view);
+  view.querySelector('#push-yes')?.addEventListener('click', enablePush);
+  view.querySelector('#push-later')?.addEventListener('click', () => { store.set('fv.pushlater', String(Date.now())); renderView(); });
 }
 
 function todayCard() {
@@ -800,6 +812,7 @@ function openMeSheet() {
         <input type="file" accept="image/*" id="photo-input" hidden></label>
       ${state.me.photo ? '<button id="remove-photo">↩️ Nota emoji í staðinn</button>' : ''}
       <button id="switch-user">🔄 Skipta um notanda</button>
+      ${pushMenuRow()}
       <button id="change-pin">🔢 Breyta PIN-inu mínu</button>
       ${isParent() && others.length ? `
         <div class="card-label">Gleymt PIN? Endurstilla fyrir:</div>
@@ -817,6 +830,7 @@ function openMeSheet() {
     s.close();
     await savePhoto(null);
   });
+  s.el.querySelector('#enable-push')?.addEventListener('click', async () => { s.close(); await enablePush(); });
   s.el.querySelector('#switch-user').addEventListener('click', () => {
     s.close(); store.set(ME_KEY, null); state.me = null; state.tab = 'home'; renderPicker();
   });
@@ -918,6 +932,172 @@ async function savePhoto(photo) {
     console.error(e);
     toast(e.code === 'no_column' ? 'Það þarf að uppfæra gagnagrunninn fyrst (2-myndir.sql)' : 'Gat ekki vistað myndina — athugaðu netið');
   }
+}
+
+// ------------------------------------------------------------------
+// Tilkynningar
+// ------------------------------------------------------------------
+const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent);
+const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+
+async function loadNotices() {
+  try { state.notices = await state.backend.listNotices(new Date(Date.now() - 86400000).toISOString()); }
+  catch (e) { state.notices = []; }          // taflan ekki til ennþá → engin skilaboð
+}
+
+function relTime(s) {
+  const min = Math.round((Date.now() - new Date(s)) / 60000);
+  if (min < 1) return 'rétt í þessu';
+  if (min < 60) return `fyrir ${min} mín`;
+  const h = Math.round(min / 60);
+  return h < 24 ? `fyrir ${h} klst` : 'í gær';
+}
+
+function noticesCard() {
+  const mine = state.notices.filter((n) => !n.to_id || n.to_id === state.me.id).slice(0, 3);
+  if (!mine.length) return '';
+  return `
+    <section class="card notices">
+      <div class="card-label">📣 Skilaboð</div>
+      <ul class="notice-list">
+        ${mine.map((n) => {
+          const from = profileById(n.from_id);
+          return `<li>${avatar(from, 'sm')}<div><p class="notice-body">${esc(n.body)}</p>
+            <p class="muted small">${esc(from ? firstName(from.name) : '')}${n.to_id ? ' · bara til þín' : ''} · ${esc(relTime(n.created_at))}</p></div></li>`;
+        }).join('')}
+      </ul>
+    </section>`;
+}
+
+function pushPromptCard() {
+  if (state.backend.mode !== 'live' || !pushSupported() || !isStandalone()) return '';
+  if (Notification.permission !== 'default') return '';
+  const later = Number(store.get('fv.pushlater') || 0);
+  if (Date.now() - later < 3 * 86400000) return '';
+  return `
+    <section class="card push-prompt">
+      <div class="card-label">🔔 Tilkynningar</div>
+      <p>${isParent() ? 'Fáðu skilaboð sem send eru á fjölskylduna.' : 'Kveiktu á tilkynningum svo þú missir ekki af skilaboðum frá mömmu og pabba.'}</p>
+      <div class="row-actions">
+        <button class="btn primary" id="push-yes">Kveikja á tilkynningum</button>
+        <button class="btn" id="push-later">Seinna</button>
+      </div>
+    </section>`;
+}
+
+function pushMenuRow() {
+  if (state.backend.mode !== 'live') return '';
+  if (!pushSupported()) {
+    return isIOS() && !isStandalone()
+      ? '<p class="menu-note">🔔 Opnaðu appið af heimaskjánum til að geta fengið tilkynningar.</p>'
+      : '<p class="menu-note">🔔 Þessi vafri styður ekki tilkynningar.</p>';
+  }
+  if (Notification.permission === 'granted') return '<p class="menu-note">🔔 Kveikt á tilkynningum í þessum síma</p>';
+  if (Notification.permission === 'denied') {
+    return '<p class="menu-note">🔕 Tilkynningar eru bannaðar. Leyfðu þær í Stillingum símans → Tilkynningar → Fjölskyldan.</p>';
+  }
+  return '<button id="enable-push">🔔 Kveikja á tilkynningum</button>';
+}
+
+async function enablePush() {
+  if (!pushSupported()) {
+    toast(isIOS() && !isStandalone() ? 'Opnaðu appið af heimaskjánum fyrst' : 'Þessi sími styður ekki tilkynningar');
+    return;
+  }
+  let perm;
+  try { perm = await Notification.requestPermission(); } catch { perm = 'denied'; }
+  if (perm !== 'granted') {
+    toast('Tilkynningar ekki leyfðar — hægt að breyta í Stillingum símans');
+    renderView();
+    return;
+  }
+  try {
+    await subscribePush();
+    toast('Kveikt á tilkynningum 🔔');
+  } catch (e) {
+    console.error(e);
+    toast(e.code === 'not_setup' ? 'Það þarf að uppfæra þjóninn fyrst' : 'Gat ekki kveikt á tilkynningum — reyndu aftur');
+  }
+  renderView();
+}
+
+function b64ToBytes(b64) {
+  const pad = '='.repeat((4 - (b64.length % 4)) % 4);
+  const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+}
+
+async function subscribePush() {
+  const key = await state.backend.pushPublicKey();
+  if (!key) return;
+  const reg = await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(key) });
+  await state.backend.savePushSubscription(state.me.id, sub);
+}
+
+// Við hverja opnun: tengja síma þessa notanda (líka eftir „Skipta um notanda“)
+function syncPush() {
+  if (state.backend.mode !== 'live' || !pushSupported() || Notification.permission !== 'granted') return;
+  subscribePush().catch((e) => console.error('push sync', e));
+}
+
+const QUICK = ['Matur er tilbúinn! 🍽️', 'Komið heim 🏠', 'Ég er á leiðinni 🚗', 'Munið að taka til 🧹', 'Kominn tími á háttinn 😴'];
+
+function openSendSheet() {
+  if (!isParent()) return;
+  let to = 'allir';
+  const people = state.profiles.filter((p) => p.id !== state.me.id);
+  const s = openSheet(`
+    <h2>📣 Senda tilkynningu</h2>
+    <div class="card-label">Til</div>
+    <div class="filters wrap" id="to-list">
+      <button class="filter on" data-to="allir" style="--c:var(--accent)"><span class="avatar sm" style="--c:var(--accent)">👨‍👩‍👧‍👦</span><span>Allir</span></button>
+      ${people.map((p) => `<button class="filter" data-to="${esc(p.id)}" style="--c:${esc(p.color)}">${avatar(p, 'sm')}<span>${esc(firstName(p.name))}</span></button>`).join('')}
+    </div>
+    <label class="field"><span>Skilaboð</span>
+      <textarea id="notice-text" rows="3" maxlength="300" placeholder="Skrifaðu skilaboð…"></textarea></label>
+    <div class="chips">${QUICK.map((q) => `<button class="chip quick" type="button">${esc(q)}</button>`).join('')}</div>
+    <div class="sheet-actions">
+      <button class="btn primary big" id="send-notice">Senda á alla</button>
+      <button class="btn" data-close>Hætta við</button>
+    </div>`);
+
+  const btn = s.el.querySelector('#send-notice');
+  const text = s.el.querySelector('#notice-text');
+  const label = () => {
+    const p = profileById(to);
+    btn.textContent = to === 'allir' ? 'Senda á alla' : `Senda á ${firstName(p.name)}`;
+  };
+  s.el.querySelectorAll('[data-to]').forEach((b) => b.addEventListener('click', () => {
+    to = b.dataset.to;
+    s.el.querySelectorAll('[data-to]').forEach((x) => x.classList.toggle('on', x === b));
+    label();
+  }));
+  s.el.querySelectorAll('.quick').forEach((b) => b.addEventListener('click', () => { text.value = b.textContent; text.focus(); }));
+
+  btn.addEventListener('click', async () => {
+    const body = text.value.trim();
+    if (!body) { text.focus(); return toast('Skrifaðu skilaboð fyrst'); }
+    btn.disabled = true; btn.textContent = 'Sendi…';
+    try {
+      const res = await state.backend.sendNotice(state.me.id, to, body);
+      s.close();
+      await loadNotices(); renderView();
+      const who = to === 'allir' ? null : firstName(profileById(to).name);
+      if (state.backend.mode === 'demo') toast('Sent (prufuútgáfa — engin tilkynning fer í síma)');
+      else if (!res.devices) toast(who ? `Vistað — en ${who} hefur ekki kveikt á tilkynningum` : 'Vistað — enginn hefur kveikt á tilkynningum ennþá');
+      else toast(`Sent 📣 (${res.sent} af ${res.devices} ${res.devices === 1 ? 'síma' : 'símum'})`);
+    } catch (e) {
+      console.error(e);
+      btn.disabled = false; label();
+      toast(e.code === 'parents_only' ? 'Aðeins foreldrar geta sent tilkynningar'
+        : e.code === 'not_setup' || e.code === 'bad_range' ? 'Það þarf að uppfæra þjóninn í Supabase fyrst'
+          : 'Gat ekki sent — athugaðu netið');
+    }
+  });
+  setTimeout(() => text.focus(), 250);
 }
 
 // ==================================================================
