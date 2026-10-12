@@ -1,7 +1,7 @@
 import { createBackend } from './data.js';
 import { CALENDAR_FUNCTION } from './config.js';
 
-const APP_VERSION = 'fv-v17';
+const APP_VERSION = 'fv-v18';
 import {
   DAYS, DAYS_SHORT, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -426,6 +426,7 @@ function renderHome(view) {
       <h1>${greet}, ${esc(firstName(state.me.name))} ${esc(state.me.emoji)}</h1>
     </section>
 
+    ${noticesCard()}
     ${pushPromptCard()}
     ${todayCard()}
 
@@ -437,7 +438,6 @@ function renderHome(view) {
            <p class="muted">${isParent() ? 'Ýttu hér til að skipuleggja vikuna' : 'Mamma og pabbi eru að hugsa málið 🤔'}</p>`}
     </button>
 
-    ${noticesCard()}
     ${remindersCard()}
     ${isParent() ? approvalsCard() : myChoresCard()}
 
