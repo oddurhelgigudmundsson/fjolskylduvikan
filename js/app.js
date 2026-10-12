@@ -1,4 +1,7 @@
 import { createBackend } from './data.js';
+import { CALENDAR_FUNCTION } from './config.js';
+
+const APP_VERSION = 'fv-v5';
 import {
   DAYS, DAYS_SHORT, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -128,6 +131,7 @@ async function loadEvents() {
   } catch (e) {
     console.error(e);
     if (state.calKey !== key) return;
+    state.calError = e.code || 'error';
     if (e.code === 'not_setup' || e.code === 'no_calendars') state.calStatus = 'not_setup';
     else if (state.calStatus !== 'ok') state.calStatus = 'error';
   }
@@ -620,8 +624,12 @@ function renderCal(view) {
 
   let body;
   if (state.calStatus === 'not_setup') {
+    const why = state.calError === 'no_calendars'
+      ? 'Fallið fannst, en leynilegu iCal-slóðirnar (ICAL_HEIMILID / ICAL_ODDUR) vantar í Supabase → Edge Functions → Secrets.'
+      : `Fann ekki dagatalsfallið „${esc(CALENDAR_FUNCTION)}“ í Supabase → Edge Functions.`;
     body = `<div class="empty"><div class="empty-mark">🔌</div><p>Dagatalið er ekki tengt ennþá</p>
-      <p class="muted">Það þarf að setja dagatalið upp í Supabase — sjá leiðbeiningarnar.</p></div>`;
+      <p class="muted">${why}</p><button class="btn" id="cal-retry">Reyna aftur</button>
+      <p class="muted small">Útgáfa ${APP_VERSION}</p></div>`;
   } else if (state.calStatus === 'loading') {
     body = '<div class="empty"><div class="empty-mark">📅</div><p class="muted">Sæki dagatalið…</p></div>';
   } else if (state.calStatus === 'error' && !state.events.length) {

@@ -1,7 +1,7 @@
 // Service worker: geymir sjálft appið svo það opnist hratt.
 // Gögnin (Supabase) eru alltaf sótt beint og aldrei geymd hér.
 // Hækkaðu VERSION þegar ný útgáfa er sett út.
-const VERSION = 'fv-v4';
+const VERSION = 'fv-v5';
 const SHELL = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
   'js/app.js', 'js/data.js', 'js/util.js', 'js/config.js',
@@ -9,7 +9,7 @@ const SHELL = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
@@ -40,7 +40,7 @@ self.addEventListener('fetch', (e) => {
 
   // Appið sjálft: nýjasta af netinu, annars úr geymslu
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-cache' })     // alltaf nýjasta útgáfan, ekki gömul úr vafranum
       .then((res) => {
         if (res.ok) caches.open(VERSION).then((c) => c.put(e.request, res.clone()));
         return res;
