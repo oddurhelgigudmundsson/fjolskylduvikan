@@ -6,6 +6,8 @@
 //    og áminningar sem eiga að fara núna eru sendar í síma viðkomandi.
 // 4) Heimilisverk: foreldrar fá tilkynningu þegar verk bíður samþykkis, og börnin
 //    þegar það er samþykkt. (Sigurvegara vikunnar tilkynna foreldrarnir sjálfir.)
+// 5) Saman: sá sem fær hrós fær tilkynningu, og kl. 18 fá allir áminningu ef
+//    engin mynd dagsins er komin.
 //
 // Leyndarmál (Supabase → Edge Functions → Secrets):
 //   ICAL_HEIMILID  – leynileg iCal-slóð "Heimilið"
@@ -50,7 +52,9 @@ Deno.serve(async (req) => {
     try {
       const { data } = await admin().from('app_settings').select('value').eq('key', 'cron').maybeSingle();
       if (!data?.value?.key || data.value.key !== cronKey) return json({ error: 'forbidden' }, 403);
-      return json(await runReminders());
+      const out = await runReminders();
+      out.photoNudge = await photoNudge();
+      return json(out);
     } catch (e) {
       console.error(e);
       return json({ error: 'server_error', detail: String(e?.message || e) }, 500);
@@ -71,6 +75,7 @@ Deno.serve(async (req) => {
     if (body.action === 'send') return await sendNotice(body);
     if (body.action === 'chore_done') return await choreDone(body);
     if (body.action === 'chore_review') return await choreReview(body);
+    if (body.action === 'kudos') return await kudosPush(body);
     return await calendar(body);
   } catch (e) {
     console.error(e);
@@ -250,6 +255,40 @@ async function choreReview({ log_id, approve, by }) {
     await pushTo(db, log.profile_id, { title: '🔁 Ekki alveg búið', body: `${first(parent.name)}: ${what} — reyndu aftur 🙂`, tag: 'chore-' + log.id, url: './' });
   }
   return json({ ok: true });
+}
+
+// ------------------------------------------------------------------
+// Saman: hrós og mynd dagsins
+// ------------------------------------------------------------------
+async function kudosPush({ kudos_id }) {
+  const db = admin();
+  const { data: k } = await db.from('kudos').select('*').eq('id', kudos_id).maybeSingle();
+  if (!k) return json({ ok: true, sent: 0 });
+  const { data: from } = await db.from('profiles').select('name').eq('id', k.from_id).maybeSingle();
+  const name = String(from?.name || '').split(' ')[0];
+  let sent = 0;
+  if (k.to_id) {
+    sent = (await pushTo(db, k.to_id, { title: `${k.emoji} ${name} hrósaði þér`, body: k.body, tag: 'kudos-' + k.id, url: './' })).sent;
+  } else {
+    const { data: everyone } = await db.from('profiles').select('id').neq('id', k.from_id);
+    for (const p of everyone || []) {
+      sent += (await pushTo(db, p.id, { title: `${k.emoji} ${name} hrósaði fjölskyldunni`, body: k.body, tag: 'kudos-' + k.id, url: './' })).sent;
+    }
+  }
+  return json({ ok: true, sent });
+}
+
+// Kl. 18:00 (eða næsta keyrsla eftir það): ef engin mynd dagsins er komin
+async function photoNudge() {
+  const now = icelandNow();
+  if (now.minutes < 18 * 60 || now.minutes >= 19 * 60) return null;
+  const db = admin();
+  const { data: today } = await db.from('photos').select('id').eq('day', now.day).limit(1);
+  if (today?.length) return { skipped: 'has_photo' };
+  const mark = await db.from('app_settings').insert({ key: 'photo-nudge-' + now.day, value: { at: new Date().toISOString() } });
+  if (mark.error) return null;                                     // þegar sent í dag
+  const r = await pushTo(db, null, { title: '📸 Mynd dagsins', body: 'Engin mynd dagsins ennþá — hver tekur hana?', tag: 'photo-' + now.day, url: './' });
+  return { sent: r.sent };
 }
 
 // ------------------------------------------------------------------

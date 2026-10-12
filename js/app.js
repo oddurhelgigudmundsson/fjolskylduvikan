@@ -1,9 +1,9 @@
 import { createBackend } from './data.js';
 import { CALENDAR_FUNCTION } from './config.js';
 
-const APP_VERSION = 'fv-v18';
+const APP_VERSION = 'fv-v19';
 import {
-  DAYS, DAYS_SHORT, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
+  DAYS, DAYS_SHORT, MONTHS, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
 } from './util.js';
 
@@ -26,6 +26,13 @@ const state = {
   reminders: [],
   chores: [],
   choreLogs: [],                  // síðasta vika + þessi vika
+  photos: [],
+  reactions: [],
+  photoUrls: {},                  // slóð í geymslu → undirrituð slóð
+  photoDays: 62,                  // hversu langt aftur myndir eru sóttar
+  kudos: [],
+  wishes: [],
+  wishPerson: null,
   remDone: new Set(),             // 'reminderId|profileId' fyrir daginn í dag
   unsub: [],
 };
@@ -72,6 +79,7 @@ async function startMain() {
   renderShell();
   await Promise.all([loadItems(), loadMeals(), loadNotices(), loadReminders(), loadChores()]);
   renderView();
+  Promise.all([loadPhotos(), loadKudos(), loadWishes()]).then(() => refreshIf(['home', 'photos', 'kudos', 'wishes']));
   loadEvents().then(() => refreshIf(['home', 'cal']));
   syncPush();
 
@@ -84,6 +92,10 @@ async function startMain() {
     state.backend.subscribe('reminder_done', async () => { await loadReminders(); refreshIf(['home']); }),
     state.backend.subscribe('chores', async () => { await loadChores(); refreshIf(['home', 'chores']); }),
     state.backend.subscribe('chore_log', async () => { await loadChores(); refreshIf(['home', 'chores']); }),
+    state.backend.subscribe('photos', async () => { await loadPhotos(); refreshIf(['home', 'photos']); }),
+    state.backend.subscribe('photo_reactions', async () => { await loadPhotos(); refreshIf(['home', 'photos']); }),
+    state.backend.subscribe('kudos', async () => { await loadKudos(); refreshIf(['home', 'kudos']); }),
+    state.backend.subscribe('wishes', async () => { await loadWishes(); refreshIf(['wishes']); }),
   ];
 }
 
@@ -95,7 +107,7 @@ setInterval(() => {
 // Síminn vaknar (app opnað aftur af heimaskjá) → sækja nýjustu gögn
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible' || !state.me) return;
-  await Promise.all([loadItems(), loadMeals(), reloadProfiles(), loadNotices(), loadReminders(), loadChores()]);
+  await Promise.all([loadItems(), loadMeals(), reloadProfiles(), loadNotices(), loadReminders(), loadChores(), loadPhotos(), loadKudos(), loadWishes()]);
   renderView();
   await loadEvents();
   refreshIf(['home', 'cal']);
@@ -361,6 +373,8 @@ const ICONS = {
   home: '<svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>',
   shop: '<svg viewBox="0 0 24 24"><path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h9.2a1 1 0 0 0 1-.8L20 8H6.2"/><circle cx="9.5" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/></svg>',
   chores: '<svg viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4"/></svg>',
+  food: '<svg viewBox="0 0 24 24"><path d="M7 3v8m-3-8v5a3 3 0 0 0 6 0V3M7 11v10M17 21V3c-2.2 0-4 2.7-4 7s1.8 4 4 4"/></svg>',
+  saman: '<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>',
   cal: '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
   menu: '<svg viewBox="0 0 24 24"><path d="M7 3v8m-3-8v5a3 3 0 0 0 6 0V3M7 11v10M17 21V3c-2.2 0-4 2.7-4 7s1.8 4 4 4"/></svg>',
 };
@@ -368,9 +382,25 @@ const TABS = [
   { id: 'home', label: 'Heim' },
   { id: 'cal', label: 'Dagatal' },
   { id: 'chores', label: 'Verk' },
-  { id: 'shop', label: 'Innkaup' },
-  { id: 'menu', label: 'Matseðill' },
+  { id: 'food', label: 'Matur', subs: [['shop', '🛒 Innkaup'], ['menu', '🍽️ Matseðill']] },
+  { id: 'saman', label: 'Saman', subs: [['photos', '📸 Myndir'], ['kudos', '💛 Hrós'], ['wishes', '🎁 Óskalistar']] },
 ];
+const groupOf = (tab) => (TABS.find((t) => t.id === tab || t.subs?.some(([id]) => id === tab)) || TABS[0]).id;
+const lastSub = {};
+
+// Rofi efst í flipum sem hafa fleiri en eina síðu (Matur, Saman)
+function subNav(tab) {
+  const g = TABS.find((t) => t.id === groupOf(tab));
+  if (!g?.subs) return '';
+  return `<div class="segmented subnav">${g.subs.map(([id, label]) =>
+    `<button data-sub="${id}" class="${id === tab ? 'on' : ''}">${label}</button>`).join('')}</div>`;
+}
+function bindSubNav(view) {
+  view.querySelectorAll('[data-sub]:not([data-bound])').forEach((b) => {
+    b.dataset.bound = '1';
+    b.addEventListener('click', () => go(b.dataset.sub));
+  });
+}
 
 function renderShell() {
   app.innerHTML = `
@@ -385,18 +415,23 @@ function renderShell() {
     <main id="view"></main>
     <nav class="tabbar">
       ${TABS.map((t) => `
-        <button data-tab="${t.id}" class="${state.tab === t.id ? 'active' : ''}">
+        <button data-tab="${t.id}" class="${groupOf(state.tab) === t.id ? 'active' : ''}">
           ${ICONS[t.id]}<span>${t.label}</span><i class="badge" data-badge="${t.id}"></i>
         </button>`).join('')}
     </nav>`;
-  app.querySelectorAll('.tabbar button').forEach((b) => b.addEventListener('click', () => go(b.dataset.tab)));
+  app.querySelectorAll('.tabbar button').forEach((b) => b.addEventListener('click', () => {
+    const g = TABS.find((t) => t.id === b.dataset.tab);
+    go(g.subs ? (lastSub[g.id] || g.subs[0][0]) : g.id);
+  }));
   app.querySelector('#me-btn').addEventListener('click', openMeSheet);
   app.querySelector('#send-btn')?.addEventListener('click', openSendSheet);
 }
 
 function go(tab) {
   state.tab = tab;
-  app.querySelectorAll('.tabbar button').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+  const g = groupOf(tab);
+  if (TABS.find((t) => t.id === g)?.subs) lastSub[g] = tab;
+  app.querySelectorAll('.tabbar button').forEach((b) => b.classList.toggle('active', b.dataset.tab === g));
   app.querySelector('#send-btn')?.classList.toggle('hidden', tab !== 'home');
   renderView();
   window.scrollTo({ top: 0 });
@@ -405,9 +440,13 @@ function go(tab) {
 function renderView() {
   const view = document.getElementById('view');
   if (!view) return;
-  ({ home: renderHome, cal: renderCal, chores: renderChores, shop: renderShop, menu: renderMenu }[state.tab])(view);
+  ({
+    home: renderHome, cal: renderCal, chores: renderChores, shop: renderShop, menu: renderMenu,
+    photos: renderPhotos, kudos: renderKudos, wishes: renderWishes,
+  }[state.tab])(view);
+  bindSubNav(view);
   const open = state.items.filter((i) => !i.checked).length;
-  const badge = app.querySelector('[data-badge="shop"]');
+  const badge = app.querySelector('[data-badge="food"]');
   if (badge) badge.textContent = open ? String(open) : '';
 }
 
@@ -440,6 +479,8 @@ function renderHome(view) {
 
     ${remindersCard()}
     ${isParent() ? approvalsCard() : myChoresCard()}
+    ${photosHomeCard()}
+    ${kudosHomeCard()}
 
     <button class="card tap" data-go="shop">
       <div class="card-head">
@@ -456,6 +497,7 @@ function renderHome(view) {
   bindEvents(view);
   view.querySelector('#push-yes')?.addEventListener('click', enablePush);
   bindChoreButtons(view);
+  bindSaman(view);
   view.querySelector('#rem-add')?.addEventListener('click', () => openReminderSheet());
   view.querySelector('#rem-all')?.addEventListener('click', openAllReminders);
   view.querySelectorAll('[data-rem-done]').forEach((b) => b.addEventListener('click', () => toggleRemDone(b.dataset.remDone)));
@@ -497,7 +539,7 @@ function todayCard() {
 function renderShop(view) {
   if (!view.querySelector('#add-form')) {
     view.innerHTML = `
-      <section class="hero compact"><h1>Innkaupalisti</h1></section>
+      ${subNav('shop')}
       <form id="add-form" class="add-form" autocomplete="off">
         <input id="add-input" placeholder="Bæta á listann… (t.d. mjólk, egg)" aria-label="Vara" enterkeyhint="done">
         <button class="btn primary" type="submit" aria-label="Bæta við">＋</button>
@@ -605,7 +647,7 @@ function renderMenu(view) {
   const days = [0, 1, 2, 3, 4, 5, 6].map((n) => addDays(state.weekStart, n));
 
   view.innerHTML = `
-    <section class="hero compact"><h1>Matseðill</h1></section>
+    ${subNav('menu')}
     ${weekNav()}
     <ul class="menu-days">
       ${days.map((d) => {
@@ -953,6 +995,407 @@ async function savePhoto(photo) {
     console.error(e);
     toast(e.code === 'no_column' ? 'Það þarf að uppfæra gagnagrunninn fyrst (2-myndir.sql)' : 'Gat ekki vistað myndina — athugaðu netið');
   }
+}
+
+// ==================================================================
+// Saman: mynd dagsins, hrós, óskalistar
+// ==================================================================
+async function loadPhotos() {
+  try {
+    const from = iso(addDays(new Date(), -state.photoDays));
+    const photos = await state.backend.listPhotos(from);
+    const [reactions, urls] = await Promise.all([
+      state.backend.listReactions(photos.map((p) => p.id)),
+      state.backend.photoUrls(photos.map((p) => p.path).filter((p) => !state.photoUrls[p])),
+    ]);
+    state.photos = photos;
+    state.reactions = reactions || [];
+    Object.assign(state.photoUrls, urls);
+  } catch (e) { console.error(e); state.photos = []; }
+}
+async function loadKudos() {
+  try { state.kudos = await state.backend.listKudos(new Date(Date.now() - 30 * 86400000).toISOString()); }
+  catch { state.kudos = []; }
+}
+async function loadWishes() {
+  try { state.wishes = await state.backend.listWishes(); } catch { state.wishes = []; }
+}
+
+const photoSrc = (p) => state.photoUrls[p.path] || '';
+const myPhotoToday = () => state.photos.find((p) => p.profile_id === state.me.id && p.day === todayIso());
+
+function bindSaman(root) {
+  root.querySelectorAll('[data-photo]').forEach((b) => b.addEventListener('click', () => openPhotoViewer(b.dataset.photo)));
+  root.querySelector('#photo-add')?.addEventListener('click', openPhotoPicker);
+  root.querySelector('#kudos-add')?.addEventListener('click', () => openKudosSheet());
+}
+
+// ---------------- 📸 Mynd dagsins ----------------
+function photosHomeCard() {
+  const today = state.photos.filter((p) => p.day === todayIso());
+  const mine = myPhotoToday();
+  return `
+    <section class="card photos-card">
+      <div class="card-head">
+        <div class="card-label">📸 Myndir dagsins</div>
+        <button class="link small" data-go="photos">Árið okkar ›</button>
+      </div>
+      ${today.length ? `<div class="photo-strip">${today.map((p) => `
+        <button class="thumb" data-photo="${esc(p.id)}" aria-label="Mynd frá ${esc(profileById(p.profile_id)?.name || '')}">
+          <img src="${esc(photoSrc(p))}" alt="" loading="lazy">${avatar(profileById(p.profile_id), 'sm')}
+        </button>`).join('')}</div>` : '<p class="muted">Engin mynd komin í dag.</p>'}
+      ${mine ? '' : '<button class="btn add-rem" id="photo-add">📷 Taka mynd dagsins</button>'}
+    </section>`;
+}
+
+// Les dagsetninguna sem myndavélin skráði í myndina (EXIF). null ef ekki finnst.
+async function readExifDate(file) {
+  try {
+    const buf = await file.slice(0, 262144).arrayBuffer();
+    const v = new DataView(buf);
+    if (v.getUint16(0) !== 0xFFD8) return null;
+    let off = 2;
+    while (off + 4 < v.byteLength) {
+      const marker = v.getUint16(off);
+      const len = v.getUint16(off + 2);
+      if (marker === 0xFFE1 && v.getUint32(off + 4) === 0x45786966) {            // "Exif"
+        const t = off + 10;
+        const le = v.getUint16(t) === 0x4949;
+        const u16 = (o) => v.getUint16(t + o, le);
+        const u32 = (o) => v.getUint32(t + o, le);
+        const str = (o, n) => { let x = ''; for (let i = 0; i < n - 1; i++) x += String.fromCharCode(v.getUint8(t + o + i)); return x; };
+        const readIfd = (ifd) => {
+          const out = {};
+          const n = u16(ifd);
+          for (let i = 0; i < n; i++) {
+            const e = ifd + 2 + i * 12;
+            const tag = u16(e), count = u32(e + 4);
+            if (tag === 0x8769) out.exif = u32(e + 8);
+            if (tag === 0x0132 || tag === 0x9003 || tag === 0x9004) out[tag] = str(u32(e + 8), count);
+          }
+          return out;
+        };
+        const ifd0 = readIfd(u32(4));
+        const exif = ifd0.exif ? readIfd(ifd0.exif) : {};
+        const raw = exif[0x9003] || exif[0x9004] || ifd0[0x0132];
+        const m = raw && raw.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2})/);
+        return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) : null;
+      }
+      if ((marker & 0xFF00) !== 0xFF00) return null;
+      off += 2 + len;
+    }
+  } catch { /* ekki lesanlegt */ }
+  return null;
+}
+
+async function shrinkPhoto(file, max = 1440) {
+  let img;
+  try { img = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+  catch {
+    img = await new Promise((res, rej) => {
+      const u = URL.createObjectURL(file); const i = new Image();
+      i.onload = () => { URL.revokeObjectURL(u); res(i); }; i.onerror = rej; i.src = u;
+    });
+  }
+  const w = img.width, h = img.height, k = Math.min(1, max / Math.max(w, h));
+  const c = document.createElement('canvas');
+  c.width = Math.round(w * k); c.height = Math.round(h * k);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  return new Promise((res) => c.toBlob(res, 'image/jpeg', 0.82));
+}
+
+function openPhotoPicker() {
+  const s = openSheet(`
+    <h2>📸 Mynd dagsins</h2>
+    <p class="muted">${myPhotoToday() ? 'Þú ert búin/n að setja mynd í dag — ný mynd kemur í staðinn.' : 'Ein mynd á mann á dag. Myndin þarf að vera tekin í dag.'}</p>
+    <label class="btn primary big file-btn">📷 Taka mynd<input type="file" accept="image/*" capture="environment" id="pick-camera" hidden></label>
+    <label class="btn big file-btn">🖼️ Velja mynd frá í dag<input type="file" accept="image/jpeg,image/*" id="pick-library" hidden></label>
+    <button class="btn" data-close>Hætta við</button>`);
+  const handle = async (file, fromCamera) => {
+    if (!file) return;
+    let taken = await readExifDate(file);
+    if (!fromCamera) {
+      if (!taken) return toast('Gat ekki séð hvenær myndin var tekin — notaðu 📷 Taka mynd');
+      if (iso(taken) !== todayIso()) return toast('Myndin þarf að vera tekin í dag 📅');
+    } else if (taken && iso(taken) !== todayIso()) {
+      return toast('Myndin þarf að vera tekin í dag 📅');
+    }
+    s.close();
+    setTimeout(() => openPhotoCaption(file, taken || new Date()), 230);
+  };
+  s.el.querySelector('#pick-camera').addEventListener('change', (e) => handle(e.target.files?.[0], true));
+  s.el.querySelector('#pick-library').addEventListener('change', (e) => handle(e.target.files?.[0], false));
+}
+
+function openPhotoCaption(file, taken) {
+  const preview = URL.createObjectURL(file);
+  const s = openSheet(`
+    <h2>Mynd dagsins</h2>
+    <img class="photo-preview" src="${preview}" alt="">
+    <label class="field"><span>Texti <em class="muted">(valfrjálst)</em></span>
+      <input id="photo-caption" maxlength="140" placeholder="t.d. Fyrsti snjórinn ❄️"></label>
+    <div class="sheet-actions">
+      <button class="btn primary big" id="photo-save">Setja inn</button>
+      <button class="btn" data-close>Hætta við</button>
+    </div>`);
+  const btn = s.el.querySelector('#photo-save');
+  btn.addEventListener('click', async () => {
+    btn.disabled = true; btn.textContent = 'Sendi mynd…';
+    try {
+      const blob = await shrinkPhoto(file);
+      await state.backend.addPhoto({
+        profile_id: state.me.id, day: todayIso(), taken_at: taken.toISOString(),
+        caption: s.el.querySelector('#photo-caption').value.trim() || null, blob,
+      });
+      URL.revokeObjectURL(preview);
+      s.close();
+      await loadPhotos(); renderView();
+      toast('Mynd dagsins komin 📸');
+    } catch (e) {
+      console.error(e);
+      btn.disabled = false; btn.textContent = 'Setja inn';
+      toast('Gat ekki sent myndina — er búið að keyra 6-saman.sql?');
+    }
+  });
+}
+
+const REACTIONS = ['❤️', '😂', '😍', '👏', '🔥'];
+
+function openPhotoViewer(id) {
+  const p = state.photos.find((x) => x.id === id);
+  if (!p) return;
+  const who = profileById(p.profile_id);
+  const mine = state.reactions.find((r) => r.photo_id === id && r.profile_id === state.me.id)?.emoji;
+  const counts = Object.fromEntries(REACTIONS.map((e) => [e, state.reactions.filter((r) => r.photo_id === id && r.emoji === e).length]));
+  const whoReacted = state.reactions.filter((r) => r.photo_id === id)
+    .map((r) => `${r.emoji} ${esc(firstName(profileById(r.profile_id)?.name || ''))}`).join(' · ');
+  const s = openSheet(`
+    <img class="photo-full" src="${esc(photoSrc(p))}" alt="">
+    <div class="photo-meta">${avatar(who, 'sm')}<div>
+      <strong>${esc(who?.name || '')}</strong>
+      <span class="muted small">${esc(longDate(fromIso(p.day)))}</span></div></div>
+    ${p.caption ? `<p class="photo-caption">${esc(p.caption)}</p>` : ''}
+    <div class="react-row">${REACTIONS.map((e) => `
+      <button class="react ${mine === e ? 'on' : ''}" data-react="${e}">${e}${counts[e] ? `<span>${counts[e]}</span>` : ''}</button>`).join('')}</div>
+    ${whoReacted ? `<p class="muted small">${whoReacted}</p>` : ''}
+    <div class="sheet-actions">
+      ${p.profile_id === state.me.id || isParent() ? '<button class="btn danger-text" id="photo-del">Eyða mynd</button>' : ''}
+      <button class="btn" data-close>Loka</button>
+    </div>`);
+  s.el.querySelectorAll('[data-react]').forEach((b) => b.addEventListener('click', async () => {
+    const e = b.dataset.react === mine ? null : b.dataset.react;
+    try {
+      await state.backend.react(id, state.me.id, e);
+      await loadPhotos(); s.close(); renderView();
+      setTimeout(() => openPhotoViewer(id), 230);
+    } catch { toast('Gat ekki vistað'); }
+  }));
+  s.el.querySelector('#photo-del')?.addEventListener('click', async () => {
+    try { await state.backend.deletePhoto(p); await loadPhotos(); s.close(); renderView(); toast('Mynd eytt'); }
+    catch { toast('Gat ekki eytt'); }
+  });
+}
+
+function renderPhotos(view) {
+  const byDay = new Map();
+  for (const p of state.photos) (byDay.get(p.day) || byDay.set(p.day, []).get(p.day)).push(p);
+  let lastMonth = '';
+  const days = [...byDay.entries()].map(([day, list]) => {
+    const d = fromIso(day);
+    const month = `${MONTHS[d.getMonth()].charAt(0).toUpperCase() + MONTHS[d.getMonth()].slice(1)} ${d.getFullYear()}`;
+    const head = month !== lastMonth ? `<h2 class="month-title">${esc(month)}</h2>` : '';
+    lastMonth = month;
+    return `${head}
+      <section class="photo-day">
+        <div class="photo-day-title">${esc(DAYS[d.getDay()])} ${d.getDate()}.${day === todayIso() ? '<span class="pill accent">Í dag</span>' : ''}</div>
+        <div class="photo-grid">${list.map((p) => {
+          const n = state.reactions.filter((r) => r.photo_id === p.id).length;
+          return `<button class="thumb big" data-photo="${esc(p.id)}">
+            <img src="${esc(photoSrc(p))}" alt="" loading="lazy">${avatar(profileById(p.profile_id), 'sm')}
+            ${n ? `<span class="react-count">❤️ ${n}</span>` : ''}</button>`;
+        }).join('')}</div>
+      </section>`;
+  }).join('');
+
+  view.innerHTML = `
+    ${subNav('photos')}
+    <section class="hero compact"><h1>Árið okkar</h1></section>
+    ${myPhotoToday() ? '' : '<button class="btn primary big" id="photo-add">📷 Taka mynd dagsins</button>'}
+    ${days || '<div class="empty"><div class="empty-mark">📸</div><p>Engar myndir ennþá</p><p class="muted">Ein mynd á dag frá hverjum — og í lok árs eigið þið heilt myndaalbúm.</p></div>'}
+    ${state.photos.length ? '<button class="btn" id="photos-more">Sjá eldri myndir</button>' : ''}`;
+  bindSaman(view);
+  view.querySelector('#photos-more')?.addEventListener('click', async () => {
+    state.photoDays += 120; await loadPhotos(); renderView();
+  });
+}
+
+// ---------------- 💛 Hrós ----------------
+const KUDOS_EMOJI = ['💛', '💪', '🌟', '🙏', '🔥', '😂'];
+const KUDOS_QUICK = ['Takk fyrir hjálpina!', 'Vel gert í dag!', 'Þú ert frábær 💛', 'Takk fyrir að taka til', 'Geggjað á æfingunni!'];
+
+function kudosRow(k) {
+  const from = profileById(k.from_id), to = k.to_id ? profileById(k.to_id) : null;
+  return `<li class="kudos">
+    <div class="kudos-who">${avatar(from, 'sm')}<span class="arrow">→</span>${to ? avatar(to, 'sm') : '<span class="avatar sm" style="--c:var(--accent)">👨‍👩‍👧‍👦</span>'}
+      <span class="muted small">${esc(firstName(from?.name || ''))} → ${esc(to ? firstName(to.name) : 'öll fjölskyldan')} · ${esc(relTime(k.created_at))}</span></div>
+    <p class="kudos-body"><span class="kudos-emoji">${esc(k.emoji)}</span> ${esc(k.body)}</p>
+  </li>`;
+}
+
+function kudosHomeCard() {
+  const today = state.kudos.filter((k) => iso(new Date(k.created_at)) === todayIso());
+  return `
+    <section class="card kudos-card">
+      <div class="card-head">
+        <div class="card-label">💛 Hrós dagsins</div>
+        <button class="link small" data-go="kudos">Hrósveggurinn ›</button>
+      </div>
+      ${today.length ? `<ul class="kudos-list">${today.slice(0, 2).map(kudosRow).join('')}</ul>
+        ${today.length > 2 ? `<p class="muted small">+${today.length - 2} fleiri í dag</p>` : ''}`
+        : '<p class="muted">Enginn hefur fengið hrós í dag ennþá. Vertu fyrst/ur! 💛</p>'}
+      <button class="btn add-rem" id="kudos-add">💛 Senda hrós</button>
+    </section>`;
+}
+
+function renderKudos(view) {
+  view.innerHTML = `
+    ${subNav('kudos')}
+    <section class="hero compact"><h1>Hrósveggurinn</h1></section>
+    <button class="btn primary big" id="kudos-add">💛 Senda hrós</button>
+    ${state.kudos.length ? `<ul class="kudos-list wall">${state.kudos.map(kudosRow).join('')}</ul>`
+      : '<div class="empty"><div class="empty-mark">💛</div><p>Engin hrós ennþá</p><p class="muted">Sendu fyrsta hrósið!</p></div>'}`;
+  bindSaman(view);
+}
+
+function openKudosSheet() {
+  let to = null, emoji = '💛';
+  const others = state.profiles.filter((p) => p.id !== state.me.id);
+  const s = openSheet(`
+    <h2>💛 Senda hrós</h2>
+    <div class="card-label">Til</div>
+    <div class="filters wrap">
+      ${others.map((p) => `<button class="filter" data-kto="${esc(p.id)}" style="--c:${esc(p.color)}">${avatar(p, 'sm')}<span>${esc(firstName(p.name))}</span></button>`).join('')}
+      <button class="filter" data-kto="allir" style="--c:var(--accent)"><span class="avatar sm" style="--c:var(--accent)">👨‍👩‍👧‍👦</span><span>Allir</span></button>
+    </div>
+    <div class="emoji-pick">${KUDOS_EMOJI.map((e) => `<button class="${e === emoji ? 'on' : ''}" data-kemoji="${e}">${e}</button>`).join('')}</div>
+    <label class="field"><span>Hrósið</span><textarea id="kudos-text" rows="2" maxlength="200" placeholder="Hvað viltu þakka eða hrósa fyrir?"></textarea></label>
+    <div class="chips">${KUDOS_QUICK.map((q) => `<button class="chip quick" type="button">${esc(q)}</button>`).join('')}</div>
+    <div class="sheet-actions">
+      <button class="btn primary big" id="kudos-send">Senda hrós</button>
+      <button class="btn" data-close>Hætta við</button>
+    </div>`);
+  const el = s.el;
+  el.querySelectorAll('[data-kto]').forEach((b) => b.addEventListener('click', () => {
+    to = b.dataset.kto;
+    el.querySelectorAll('[data-kto]').forEach((x) => x.classList.toggle('on', x === b));
+  }));
+  el.querySelectorAll('[data-kemoji]').forEach((b) => b.addEventListener('click', () => {
+    emoji = b.dataset.kemoji;
+    el.querySelectorAll('[data-kemoji]').forEach((x) => x.classList.toggle('on', x === b));
+  }));
+  const text = el.querySelector('#kudos-text');
+  el.querySelectorAll('.quick').forEach((b) => b.addEventListener('click', () => { text.value = b.textContent; }));
+  el.querySelector('#kudos-send').addEventListener('click', async () => {
+    if (!to) return toast('Veldu hverjum hrósið er til');
+    const body = text.value.trim();
+    if (!body) { text.focus(); return toast('Skrifaðu hrósið'); }
+    try {
+      const id = await state.backend.addKudos({ from_id: state.me.id, to_id: to === 'allir' ? null : to, emoji, body });
+      state.backend.kudosPush(id).catch(() => {});
+      s.close(); await loadKudos(); renderView();
+      toast('Hrós sent 💛');
+    } catch (e) { console.error(e); toast('Gat ekki sent — er búið að keyra 6-saman.sql?'); }
+  });
+}
+
+// ---------------- 🎁 Óskalistar ----------------
+const kr = (n) => (n || n === 0) ? String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' kr.' : '';
+const safeUrl = (u) => { try { const x = new URL(u); return /^https?:$/.test(x.protocol) ? x.href : null; } catch { return null; } };
+
+function renderWishes(view) {
+  const who = profileById(state.wishPerson) || state.me;
+  state.wishPerson = who.id;
+  const mineList = who.id === state.me.id;
+  const list = state.wishes.filter((w) => w.owner_id === who.id)
+    .sort((a, b) => (b.starred - a.starred) || a.created_at.localeCompare(b.created_at));
+  const people = [state.me, ...state.profiles.filter((p) => p.id !== state.me.id)];
+  view.innerHTML = `
+    ${subNav('wishes')}
+    <div class="filters">${people.map((p) => `
+      <button class="filter ${p.id === who.id ? 'on' : ''}" data-wperson="${esc(p.id)}" style="--c:${esc(p.color)}">${avatar(p, 'sm')}<span>${esc(p.id === state.me.id ? 'Minn listi' : firstName(p.name))}</span></button>`).join('')}</div>
+    <section class="hero compact"><h1>${mineList ? 'Óskalistinn minn' : `Óskalisti — ${esc(firstName(who.name))}`}</h1>
+      ${mineList ? '<p class="muted small">Hinir geta tekið frá gjafir — þú sérð aldrei hvað er frátekið 🤫</p>' : '<p class="muted small">Taktu frá það sem þú ætlar að gefa. ' + esc(firstName(who.name)) + ' sér það ekki 🤫</p>'}</section>
+    ${mineList ? '<button class="btn primary big" id="wish-add">＋ Ný ósk</button>' : ''}
+    ${list.length ? `<ul class="wish-list">${list.map((w) => {
+      const link = safeUrl(w.url);
+      const claimer = w.claimed_by ? profileById(w.claimed_by) : null;
+      let action = '';
+      if (mineList) action = `<button class="btn small-btn" data-got="${esc(w.id)}">Fékk þetta 🎉</button>`;
+      else if (!w.claimed_by) action = `<button class="btn small-btn primary" data-claim="${esc(w.id)}">Ég kaupi þessa 🤫</button>`;
+      else if (w.claimed_by === state.me.id) action = `<button class="btn small-btn" data-unclaim="${esc(w.id)}">✓ Þú tókst þessa · Hætta við</button>`;
+      else action = `<span class="claimed">🤫 ${esc(firstName(claimer?.name || ''))} tók frá</span>`;
+      return `<li class="wish ${!mineList && w.claimed_by ? 'is-claimed' : ''}">
+        <button class="wish-main" ${mineList ? `data-wedit="${esc(w.id)}"` : 'disabled'}>
+          <span class="wish-title">${w.starred ? '⭐ ' : ''}${esc(w.title)}</span>
+          ${w.price ? `<span class="wish-price">${esc(kr(w.price))}</span>` : ''}
+          ${w.note ? `<span class="muted small">${esc(w.note)}</span>` : ''}
+        </button>
+        <div class="wish-actions">${link ? `<a class="link small" href="${esc(link)}" target="_blank" rel="noopener">Skoða ↗</a>` : '<span></span>'}${action}</div>
+      </li>`;
+    }).join('')}</ul>`
+      : `<div class="empty"><div class="empty-mark">🎁</div><p>${mineList ? 'Listinn þinn er tómur' : `${esc(firstName(who.name))} hefur ekki sett neitt á listann`}</p>
+        ${mineList ? '<p class="muted">Bættu við því sem þig langar í — fyrir jól eða afmæli.</p>' : ''}</div>`}`;
+
+  view.querySelectorAll('[data-wperson]').forEach((b) => b.addEventListener('click', () => { state.wishPerson = b.dataset.wperson; renderView(); }));
+  view.querySelector('#wish-add')?.addEventListener('click', () => openWishEditor());
+  view.querySelectorAll('[data-wedit]').forEach((b) => b.addEventListener('click', () => openWishEditor(state.wishes.find((w) => w.id === b.dataset.wedit))));
+  const upd = async (id, patch, msg) => {
+    try { await state.backend.saveWish({ id, ...patch }); await loadWishes(); renderView(); if (msg) toast(msg); }
+    catch { toast('Gat ekki vistað'); }
+  };
+  view.querySelectorAll('[data-claim]').forEach((b) => b.addEventListener('click', () => upd(b.dataset.claim, { claimed_by: state.me.id, claimed_at: new Date().toISOString() }, 'Frátekið 🤫')));
+  view.querySelectorAll('[data-unclaim]').forEach((b) => b.addEventListener('click', () => upd(b.dataset.unclaim, { claimed_by: null, claimed_at: null })));
+  view.querySelectorAll('[data-got]').forEach((b) => b.addEventListener('click', async () => {
+    try { await state.backend.deleteWish(b.dataset.got); await loadWishes(); renderView(); toast('Til hamingju með gjöfina 🎉'); }
+    catch { toast('Gat ekki vistað'); }
+  }));
+}
+
+function openWishEditor(w = null) {
+  const s = openSheet(`
+    <h2>${w ? 'Breyta ósk' : '🎁 Ný ósk'}</h2>
+    <label class="field"><span>Hvað langar þig í?</span><input id="w-title" maxlength="80" value="${esc(w?.title || '')}" placeholder="t.d. Airpods"></label>
+    <label class="field"><span>Hlekkur <em class="muted">(valfrjálst)</em></span><input id="w-url" type="url" inputmode="url" value="${esc(w?.url || '')}" placeholder="https://…"></label>
+    <label class="field"><span>Verð í kr. <em class="muted">(valfrjálst)</em></span><input id="w-price" inputmode="numeric" value="${esc(w?.price ?? '')}" placeholder="t.d. 9990"></label>
+    <label class="field"><span>Athugasemd <em class="muted">(valfrjálst)</em></span><input id="w-note" maxlength="120" value="${esc(w?.note || '')}" placeholder="t.d. stærð M, svartur"></label>
+    <label class="toggle-row"><input type="checkbox" id="w-star" ${w?.starred ? 'checked' : ''}><span>⭐ Mig langar mest í þetta</span></label>
+    <div class="sheet-actions">
+      <button class="btn primary big" id="w-save">Vista</button>
+      ${w ? '<button class="btn danger-text" id="w-del">Eyða ósk</button>' : ''}
+      <button class="btn" data-close>Hætta við</button>
+    </div>`);
+  const el = s.el;
+  el.querySelector('#w-save').addEventListener('click', async () => {
+    const title = el.querySelector('#w-title').value.trim();
+    if (!title) { el.querySelector('#w-title').focus(); return toast('Skrifaðu hvað þig langar í'); }
+    const rawUrl = el.querySelector('#w-url').value.trim();
+    const url = rawUrl ? safeUrl(/^https?:\/\//i.test(rawUrl) ? rawUrl : 'https://' + rawUrl) : null;
+    if (rawUrl && !url) return toast('Hlekkurinn lítur ekki rétt út');
+    const priceNum = parseInt(el.querySelector('#w-price').value.replace(/\D/g, ''), 10);
+    const row = {
+      ...(w ? { id: w.id } : { owner_id: state.me.id }),
+      title, url, price: Number.isFinite(priceNum) ? priceNum : null,
+      note: el.querySelector('#w-note').value.trim() || null,
+      starred: el.querySelector('#w-star').checked,
+    };
+    try { await state.backend.saveWish(row); await loadWishes(); s.close(); renderView(); toast(w ? 'Ósk uppfærð' : 'Ósk komin á listann 🎁'); }
+    catch (e) { console.error(e); toast('Gat ekki vistað — er búið að keyra 6-saman.sql?'); }
+  });
+  el.querySelector('#w-del')?.addEventListener('click', async () => {
+    try { await state.backend.deleteWish(w.id); await loadWishes(); s.close(); renderView(); toast('Ósk eytt'); }
+    catch { toast('Gat ekki eytt'); }
+  });
+  if (!w) setTimeout(() => el.querySelector('#w-title').focus(), 250);
 }
 
 // ------------------------------------------------------------------

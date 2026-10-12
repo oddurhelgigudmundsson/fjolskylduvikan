@@ -64,6 +64,50 @@ async function supabaseBackend() {
         user_agent: navigator.userAgent.slice(0, 200), updated_at: new Date().toISOString(),
       }, { onConflict: 'endpoint' }));
     },
+    // ---- Saman: myndir, hrós, óskalistar ----
+    async listPhotos(from) {
+      return ok(await sb.from('photos').select('*').gte('day', from).order('day', { ascending: false }).order('created_at'));
+    },
+    async listReactions(ids) {
+      if (!ids.length) return [];
+      return ok(await sb.from('photo_reactions').select('*').in('photo_id', ids));
+    },
+    async addPhoto({ profile_id, day, caption, taken_at, blob }) {
+      const path = `${day.slice(0, 4)}/${day}/${profile_id}-${Date.now()}.jpg`;
+      ok(await sb.storage.from('myndir').upload(path, blob, { contentType: 'image/jpeg', upsert: false }));
+      const old = ok(await sb.from('photos').select('id, path').eq('profile_id', profile_id).eq('day', day));
+      if (old.length) {
+        await sb.storage.from('myndir').remove(old.map((o) => o.path));
+        ok(await sb.from('photos').delete().in('id', old.map((o) => o.id)));
+      }
+      ok(await sb.from('photos').insert({ profile_id, day, caption, taken_at, path }));
+    },
+    async deletePhoto(photo) {
+      await sb.storage.from('myndir').remove([photo.path]);
+      ok(await sb.from('photos').delete().eq('id', photo.id));
+    },
+    async photoUrls(paths) {
+      if (!paths.length) return {};
+      const data = ok(await sb.storage.from('myndir').createSignedUrls(paths, 60 * 60 * 6));
+      return Object.fromEntries(data.filter((d) => d.signedUrl).map((d) => [d.path, d.signedUrl]));
+    },
+    async react(photo_id, profile_id, emoji) {
+      if (emoji) ok(await sb.from('photo_reactions').upsert({ photo_id, profile_id, emoji }, { onConflict: 'photo_id,profile_id' }));
+      else ok(await sb.from('photo_reactions').delete().match({ photo_id, profile_id }));
+    },
+    async listKudos(since) {
+      return ok(await sb.from('kudos').select('*').gte('created_at', since).order('created_at', { ascending: false }).limit(100));
+    },
+    async addKudos(row) { return ok(await sb.from('kudos').insert(row).select('id').single()).id; },
+    async kudosPush(id) { return callFn({ action: 'kudos', kudos_id: id }); },
+    async listWishes() { return ok(await sb.from('wishes').select('*').order('starred', { ascending: false }).order('created_at')); },
+    async saveWish(w) {
+      const { id, ...row } = w;
+      if (id) ok(await sb.from('wishes').update(row).eq('id', id));
+      else ok(await sb.from('wishes').insert(row));
+    },
+    async deleteWish(id) { ok(await sb.from('wishes').delete().eq('id', id)); },
+
     async listChores() { return ok(await sb.from('chores').select('*').order('sort').order('created_at')); },
     async saveChore(c) {
       const { id, ...row } = c;
@@ -188,6 +232,49 @@ function demoBackend() {
       commit('notifications');
       return { ok: true, sent: 0, devices: 0 };
     },
+    // ---- Saman (prufuhamur) ----
+    async listPhotos(from) {
+      const d = read();
+      if (!d.photos) { d.photos = []; d.reactions = []; write(); }
+      return clone(d.photos.filter((p) => p.day >= from).sort((a, b) => b.day.localeCompare(a.day) || a.created_at.localeCompare(b.created_at)));
+    },
+    async listReactions(ids) { return clone((read().reactions || []).filter((r) => ids.includes(r.photo_id))); },
+    async addPhoto({ profile_id, day, caption, taken_at, blob }) {
+      const path = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(blob); });
+      const d = read();
+      d.photos = (d.photos || []).filter((p) => !(p.profile_id === profile_id && p.day === day));
+      d.photos.push({ id: uid(), profile_id, day, caption, taken_at, path, created_at: new Date().toISOString() });
+      commit('photos');
+    },
+    async deletePhoto(photo) { read().photos = read().photos.filter((p) => p.id !== photo.id); commit('photos'); },
+    async photoUrls(paths) { return Object.fromEntries(paths.map((p) => [p, p])); },
+    async react(photo_id, profile_id, emoji) {
+      const d = read();
+      d.reactions = (d.reactions || []).filter((r) => !(r.photo_id === photo_id && r.profile_id === profile_id));
+      if (emoji) d.reactions.push({ photo_id, profile_id, emoji });
+      commit('photo_reactions');
+    },
+    async listKudos(since) {
+      const d = read();
+      if (!d.kudos) { d.kudos = demoKudos(); write(); }
+      return clone(d.kudos.filter((k) => k.created_at >= since).sort((a, b) => b.created_at.localeCompare(a.created_at)));
+    },
+    async addKudos(row) { const id = uid(); (read().kudos ||= []).push({ id, created_at: new Date().toISOString(), ...row }); commit('kudos'); return id; },
+    async kudosPush() { return { ok: true, sent: 0 }; },
+    async listWishes() {
+      const d = read();
+      if (!d.wishes) { d.wishes = demoWishes(); write(); }
+      return clone(d.wishes);
+    },
+    async saveWish(w) {
+      const list = (read().wishes ||= []);
+      const i = w.id ? list.findIndex((x) => x.id === w.id) : -1;
+      if (i >= 0) list[i] = { ...list[i], ...w };
+      else list.push({ claimed_by: null, starred: false, ...w, id: uid(), created_at: new Date().toISOString() });
+      commit('wishes');
+    },
+    async deleteWish(id) { read().wishes = read().wishes.filter((x) => x.id !== id); commit('wishes'); },
+
     async listChores() {
       const d = read();
       if (!d.chores) { d.chores = demoChores(); d.clog = demoChoreLog(d.chores); write(); }
@@ -271,6 +358,28 @@ function demoBackend() {
 export function uid() {
   if (globalThis.crypto?.randomUUID) return crypto.randomUUID();
   return 'id-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function demoKudos() {
+  const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
+  return [
+    { id: uid(), from_id: 'alma', to_id: 'petur', emoji: '💪', body: 'Geggjað mark á æfingunni í dag!', created_at: ago(40) },
+    { id: uid(), from_id: 'kristin', to_id: 'thelma', emoji: '🙏', body: 'Takk fyrir að ganga frá eftir matinn', created_at: ago(300) },
+    { id: uid(), from_id: 'oddur', to_id: null, emoji: '💛', body: 'Takk öll fyrir frábæra helgi', created_at: ago(60 * 26) },
+  ];
+}
+
+function demoWishes() {
+  const w = (owner_id, title, extra = {}) => ({ id: uid(), owner_id, title, url: null, price: null, note: null, starred: false, claimed_by: null, created_at: new Date().toISOString(), ...extra });
+  return [
+    w('petur', 'Fótboltaskór (Nike Mercurial)', { price: 24990, note: 'Stærð 40', starred: true, url: 'https://www.example.com', claimed_by: 'kristin' }),
+    w('petur', 'Lego Technic bíll', { price: 12990 }),
+    w('petur', 'KR treyja 2027', { price: 9990, starred: true }),
+    w('alma', 'Airpods', { price: 29990, starred: true }),
+    w('alma', 'Bók: Harry Potter safn', { note: 'Íslensk útgáfa' }),
+    w('thelma', 'Nótnabók fyrir píanó', { price: 4990 }),
+    w('oddur', 'Hlaupaúr (Coros)', { price: 69990, starred: true, claimed_by: 'alma' }),
+  ];
 }
 
 function demoChores() {
