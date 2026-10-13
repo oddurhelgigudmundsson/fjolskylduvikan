@@ -22,7 +22,7 @@ Til að fá yfirlit: biddu Claude um „yfirlit yfir backlog“ og veldu númer.
 | 10 | Virkar án nets | Innkaupalistinn virkar í búðinni þótt netið detti út | Miðlungs | Í hverri búðarferð |
 | 11 | Rákir og vikuyfirlit verka | 🔥 dagar í röð, yfirlit fyrir foreldra | Lítið | Daglega |
 | 12 | Árleg heimilisverk | Dekkjaskipti, reykskynjarar, gjöld; bara foreldrar | Lítið | Nokkrum sinnum á ári |
-| 13 | Upplýsingabók fjölskyldunnar | WiFi, símanúmer, afmæli, fatastærðir | Miðlungs | Stundum |
+| 13 | Upplýsingabók fjölskyldunnar | WiFi með QR-kóða, kóðar, afmæli, fatastærðir | Miðlungs | Stundum |
 | 14 | Eigið dagatal hvers og eins | Tengja Google / iCloud / Outlook dagatal | Lítið–miðlungs | Daglega, ef þörf er á |
 | 15 | Krónan | Innkaupalistinn í Snjallverslun Krónunnar | Miðlungs | Í hverri pöntun |
 
@@ -135,12 +135,21 @@ Til að fá yfirlit: biddu Claude um „yfirlit yfir backlog“ og veldu númer.
 - Bara foreldrar sjá þetta. Byggir á áminningunum sem eru til, með „árlega“ eða „mánaðarlega“ endurtekningu.
 
 ## 13. Upplýsingabók fjölskyldunnar
-*Skoðað 13. okt. 2026 · Stærð: miðlungs*
+*Skoðað 13. okt. 2026 · Stærð: miðlungs · Allt ákveðið, tilbúið í útfærslu*
 
-- WiFi-lykilorð (líka fyrir gesti), símanúmer (skólinn, heilsugæslan, ömmur og afar), skápakóðar.
-- Afmæli í stórfjölskyldunni með áminningu viku fyrir.
-- Fatastærðir og skóstærðir krakkanna, sem passar við óskalistana.
-- Sumt er viðkvæmt: ákveða hvað börnin sjá.
+**Hvar hún er:** í valmyndinni sem opnast þegar ýtt er á myndina þína efst → „Upplýsingabók“. Opnar heila síðu. Ekki sér flipi, því hún er uppflettirit.
+
+**Kaflar í bókinni**
+- **Heimilið:** WiFi og kóðar (t.d. lyklabox).
+- **Afmæli:** stórfjölskyldan.
+- **Stærðir:** föt og skór hvers barns.
+- **Engin símanúmer**: þau eru öll í símunum hvort sem er.
+
+**Ákveðið**
+- **WiFi er bara í bókinni.** Þegar þarf að gefa gestum aðganginn er sýndur QR-kóði sem þeir skanna til að tengjast.
+- **Afmæli:** spjald á forsíðunni á afmælisdeginum sjálfum. Engin áminning fyrir fram og engin tilkynning.
+- **Stærðir** sjást líka efst á óskalista hvers barns („Skór 38 · Föt 152“).
+- **Viðkvæmt:** foreldrar geta merkt atriði „bara foreldrar“ (t.d. öryggiskóða). Börnin sjá allt annað.
 
 ## 14. Eigið dagatal hvers og eins
 *Skoðað 13. okt. 2026 · Stærð: lítið–miðlungs*
