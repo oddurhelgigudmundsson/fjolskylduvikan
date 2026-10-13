@@ -15,16 +15,18 @@
 export const FAMILIES = {
   okatp: {
     name: 'Fjölskylduvikan',
+    url: 'https://kuqxnwxcocxecxxwczqm.supabase.co',
+    key: 'sb_publishable__isNdG954mu5XoGnxdifiw_jta0WfpD',
+    fn: 'clever-api',
+  },
+  prufa1: {
+    name: 'Fjölskyldan',
     url: 'https://faeylmhhwoqwfcegjadg.supabase.co',
     key: 'sb_publishable_ezeXx6GCteR-gdRTfgEojQ_p3UOQqrS',
     fn: 'clever-api',
   },
-  // prufa1: {
-  //   name: 'Fjölskyldan',
-  //   url: 'https://XXXXXXXX.supabase.co',
-  //   key: 'sb_publishable_XXXXXXXX',
-  //   fn: 'clever-api',
-  // },
+  // Næsta fjölskylda: afritaðu prufa1-blokkina hér að ofan, gefðu henni nýjan kóða
+  // (t.d. prufa2) og settu inn hennar URL og lykil.
 };
 
 // Símar sem voru settir upp áður en fleiri fjölskyldur bættust við tilheyra þessari.
