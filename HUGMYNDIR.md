@@ -4,6 +4,35 @@ Lausar hugmyndir sem ekki er búið að skoða nánar eða raða. Þegar hugmynd
 
 ---
 
+## 📖 Story (eins og á Instagram)
+*Bætt við 13. okt. 2026 · Stærð: miðlungs (um dagur)*
+
+**Útfærslan sem Oddur vill**
+- **Bara myndir**, ein eða fleiri í einu. Engin myndbönd, enginn texti ofan á.
+- Myndirnar **lifa í 24 klukkutíma** og hverfa svo.
+- **Engin tilkynning** á hópinn þegar einhver setur inn story.
+
+**Hvernig það myndi virka**
+- Hringir með myndum fjölskyldunnar efst á forsíðunni. Litaður hringur = story sem þú hefur ekki séð.
+- Ýtt á hring: opnast á fullum skjá, með framvindustikum efst (ein fyrir hverja mynd).
+- Ýtt hægra megin = næsta mynd, vinstra megin = fyrri, haldið niðri = stoppa, strokið niður = loka.
+- Eftir síðustu mynd einnar manneskju fer story næsta í röðinni sjálfkrafa af stað.
+- Takki **＋ Story** hjá eigin hring: taka mynd eða velja úr myndasafni (fleiri en eina).
+- Sá sem setur inn getur eytt sinni story fyrr.
+
+**Tæknin**
+- Byggir á sama grunni og Mynd dagsins: minnkun mynda, læst geymsla í Supabase, aðeins fjölskyldan sér.
+- Ný tafla fyrir stories (með `expires_at`) og fyrir „séð“.
+- Klukkan sem keyrir áminningarnar (á 5 mín fresti) eyðir útrunnum myndum úr geymslunni, svo plássið fyllist ekki.
+
+**Opnar spurningar**
+- **Séð af:** á sá sem setur inn að sjá hverjir hafa skoðað?
+- **Viðbrögð:** ❤️😂😍 eins og á Mynd dagsins, eða ekkert?
+- **Mynd dagsins:** halda báðu? Tillaga: Mynd dagsins er varanleg (fer í Árið okkar), story hverfur. Möguleiki: takki „Gera að mynd dagsins“ á eigin story.
+- **Myndir eldri en í dag:** má velja gamlar myndir úr myndasafninu, eða bara myndir frá deginum, eins og í Mynd dagsins?
+
+---
+
 ## Skemmtun og samvera
 *Bætt við 13. okt. 2026*
 
