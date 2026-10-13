@@ -1,9 +1,9 @@
 import { createBackend } from './data.js';
 import { icon } from './icons.js';
 import { jokeOfTheDay } from './jokes.js';
-import { CALENDAR_FUNCTION } from './config.js';
+import { resolveFamily, chooseFamily, forgetFamily, familyCount } from './family.js';
 
-const APP_VERSION = 'fv-v25';
+const APP_VERSION = 'fv-v26';
 import {
   DAYS, DAYS_SHORT, MONTHS, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -13,6 +13,7 @@ const app = document.getElementById('app');
 const ME_KEY = 'fv.me';
 
 const state = {
+  family: null,                    // { code, name, url, key, fn } úr config.js
   backend: null,
   profiles: [],
   me: null,
@@ -54,8 +55,11 @@ const todayIso = () => iso(new Date());
 boot();
 
 async function boot() {
+  const family = resolveFamily();
+  if (family === 'ask') return renderFamilyCode();
+  state.family = family;
   try {
-    state.backend = await createBackend();
+    state.backend = await createBackend(family);
   } catch (e) {
     console.error(e);
     return renderError('Náði ekki að tengjast. Athugaðu nettenginguna og reyndu aftur.');
@@ -216,10 +220,12 @@ function refreshIf(tabs) { if (tabs.includes(state.tab)) renderView(); }
 // Innskráning fjölskyldu (einu sinni í hverjum síma)
 // ==================================================================
 function renderLogin(message = '') {
+  const switcher = familyCount() > 1
+    ? '<button class="link-btn" type="button" id="other-family">Önnur fjölskylda? Slá inn kóða</button>' : '';
   app.innerHTML = `
     <section class="center-screen">
       <div class="brand-mark">${icon('house')}</div>
-      <h1>Fjölskylduvikan</h1>
+      <h1>${esc(state.family?.name || 'Fjölskylduvikan')}</h1>
       <p class="muted">Skráðu fjölskylduaðganginn inn. Þetta þarf bara að gera einu sinni í hverjum síma.</p>
       <form class="stack" id="login">
         <label class="field"><span>Netfang</span>
@@ -229,7 +235,9 @@ function renderLogin(message = '') {
         ${message ? `<p class="error">${esc(message)}</p>` : ''}
         <button class="btn primary big" type="submit">Skrá inn</button>
       </form>
+      ${switcher}
     </section>`;
+  app.querySelector('#other-family')?.addEventListener('click', () => { forgetFamily(); renderFamilyCode(); });
   app.querySelector('#login').addEventListener('submit', async (e) => {
     e.preventDefault();
     const f = new FormData(e.target);
@@ -241,6 +249,28 @@ function renderLogin(message = '') {
     } catch {
       renderLogin('Netfang eða lykilorð er rangt.');
     }
+  });
+}
+
+// Fyrsta skipti í nýjum síma þegar fleiri en ein fjölskylda nota appið
+function renderFamilyCode(message = '') {
+  app.innerHTML = `
+    <section class="center-screen">
+      <div class="brand-mark">${icon('house')}</div>
+      <h1>Fjölskylduvikan</h1>
+      <p class="muted">Sláðu inn fjölskyldukóðann sem þú fékkst. Þetta þarf bara að gera einu sinni.</p>
+      <form class="stack" id="family-code">
+        <label class="field"><span>Fjölskyldukóði</span>
+          <input name="code" required autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off"></label>
+        ${message ? `<p class="error">${esc(message)}</p>` : ''}
+        <button class="btn primary big" type="submit">Áfram</button>
+      </form>
+    </section>`;
+  app.querySelector('#family-code').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const code = new FormData(e.target).get('code');
+    if (!chooseFamily(code)) return renderFamilyCode('Þessi kóði finnst ekki. Athugaðu stafsetninguna.');
+    location.replace(location.pathname);   // byrja upp á nýtt með réttu fjölskylduna
   });
 }
 
@@ -723,8 +753,8 @@ function renderCal(view) {
   let body;
   if (state.calStatus === 'not_setup') {
     const why = state.calError === 'no_calendars'
-      ? 'Fallið fannst, en leynilegu iCal-slóðirnar (ICAL_HEIMILID / ICAL_ODDUR) vantar í Supabase → Edge Functions → Secrets.'
-      : `Fann ekki dagatalsfallið „${esc(CALENDAR_FUNCTION)}“ í Supabase → Edge Functions.`;
+      ? 'Fallið fannst, en leynilegu iCal-slóðina (t.d. ICAL_FJOLSKYLDA) vantar í Supabase → Edge Functions → Secrets.'
+      : `Fann ekki dagatalsfallið „${esc(state.family?.fn || 'clever-api')}“ í Supabase → Edge Functions.`;
     body = `<div class="empty"><div class="empty-mark">${icon('plug')}</div><p>Dagatalið er ekki tengt ennþá</p>
       <p class="muted">${why}</p><button class="btn" id="cal-retry">Reyna aftur</button>
       <p class="muted small">Útgáfa ${APP_VERSION}</p></div>`;
@@ -745,7 +775,7 @@ function renderCal(view) {
         </section>`;
     }).join('')}</div>
     ${state.calFailed.length ? `<p class="muted small">${icon('wifi-off')} Náði ekki í öll dagatölin núna — reyni aftur seinna.</p>` : ''}
-    <p class="coming">Viðburðum er bætt við í Google Calendar. Settu nafnið fremst í titilinn,<br>t.d. „Alma – fimleikar“, þá fer hann á rétta manneskju.</p>`;
+    <p class="coming">Viðburðum er bætt við í Google Calendar. Settu nafnið fremst í titilinn,<br>t.d. „${esc(firstName(kids()[0]?.name || state.me?.name || 'Anna'))} – fimleikar“, þá fer hann á rétta manneskju.</p>`;
   }
 
   view.innerHTML = `

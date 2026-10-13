@@ -9,30 +9,57 @@
 // 5) Saman: sá sem fær hrós fær tilkynningu, og kl. 18 fá allir áminningu ef
 //    engin mynd dagsins er komin.
 //
-// Leyndarmál (Supabase → Edge Functions → Secrets):
-//   ICAL_HEIMILID  – leynileg iCal-slóð "Heimilið"
-//   ICAL_ODDUR     – leynileg iCal-slóð "Heimilið vol.2" (oddurhelgi@gmail.com)
+// Leyndarmál (Supabase → Edge Functions → Secrets): eitt fyrir hvert dagatal.
+//   ICAL_<eitthvað>  – leynileg iCal-slóð dagatals (Google, iCloud, Outlook…)
+//   Ef <eitthvað> er auðkenni prófíls (t.d. ICAL_ODDUR → 'oddur') eiga viðburðir án
+//   nafns í titli þá manneskju; annars alla fjölskylduna (t.d. ICAL_FJOLSKYLDA).
 // Lyklar fyrir tilkynningar búa sig til sjálfir í fyrsta skipti (tafla app_settings).
 
 import ICAL from 'npm:ical.js@2.2.1';
 import webpush from 'npm:web-push@3.6.7';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-// Hvaða dagatöl eru lesin. "fallback" = hver á viðburðinn ef ekkert nafn er í titlinum.
-const FEEDS = [
-  { secret: 'ICAL_HEIMILID', fallback: ['allir'] },
-  { secret: 'ICAL_ODDUR', fallback: ['oddur'] },
-];
+// Hvaða dagatöl eru lesin: öll leyndarmál sem byrja á ICAL_.
+// "fallback" = hver á viðburðinn ef ekkert nafn er í titlinum.
+function feedsFor(profileIds) {
+  return Object.entries(Deno.env.toObject())
+    .filter(([k, v]) => k.startsWith('ICAL_') && v)
+    .map(([k, v]) => {
+      const id = k.slice(5).toLowerCase();
+      return { secret: k, url: v.trim().replace(/^webcal:/i, 'https:'), fallback: profileIds.includes(id) ? [id] : ['allir'] };
+    })
+    // Sameiginleg dagatöl fyrst: sami viðburður í tveimur dagatölum fer þá á alla
+    .sort((a, b) => (a.fallback[0] === 'allir' ? 0 : 1) - (b.fallback[0] === 'allir' ? 0 : 1) || a.secret.localeCompare(b.secret));
+}
 
-// Nöfn sem þekkjast í titli viðburðar → prófíll í appinu.
-// Byrjun orðs nægir, svo beygingar fylgja með (Odd/Odds, Kristínu, Ölmu, Thelmu, Pétri).
-const PEOPLE = [
-  { id: 'oddur', names: ['odd'] },
-  { id: 'kristin', names: ['kristín', 'kristin'] },
-  { id: 'alma', names: ['alma', 'ölmu', 'almu'] },
-  { id: 'thelma', names: ['thelm'] },
-  { id: 'petur', names: ['pétur', 'pétri', 'petur', 'petri'] },
-];
+// Nöfn sem þekkjast í titli viðburðar → prófíll í appinu. Lesið úr prófílunum:
+// fornafnið og gælunöfn í dálkinum "aliases" (t.d. Gummi, Birni), hvert með
+// algengum beygingum (Odds, Pétri, Thelmu, Ölmu, Kristínar, Gumma).
+// Orðið í titlinum þarf að vera nafnið + beygingarending, svo „annað“ er ekki „Anna“.
+const fold = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ð/g, 'd').replace(/þ/g, 'th').replace(/æ/g, 'ae');
+function formsOf(word) {
+  const w = word.toLowerCase();
+  const out = [];
+  if (/ur$/.test(w) && w.length > 4) out.push([w.slice(0, -2), ['ur', 'urs', 'ar', 'i', 'ri', 's', '']]);   // Oddur, Pétur, Guðmundur
+  else if (/a$/.test(w) && w.length > 3) {                                                           // Alma, Anna, Thelma
+    const stem = w.slice(0, -1);
+    out.push([stem, ['a', 'u']]);
+    const i = stem.lastIndexOf('a');
+    if (i >= 0) out.push([stem.slice(0, i) + 'ö' + stem.slice(i + 1), ['u']]);                         // Ölmu, Önnu
+  } else if (/i$/.test(w) && w.length > 3) out.push([w.slice(0, -1), ['i', 'a']]);                    // Helgi, Gummi
+  else out.push([w, ['', 's', 'i', 'u', 'ar']]);                                                       // Jón, Kristín
+  return out;
+}
+export function namesFor(profile) {
+  const words = [String(profile.name || '').trim().split(/\s+/)[0], ...(profile.aliases || [])]
+    .map((w) => String(w || '').trim()).filter(Boolean);
+  const out = [];
+  for (const w of words) for (const [base, endings] of formsOf(w)) {
+    out.push({ base, endings });
+    if (fold(base) !== base) out.push({ base: fold(base), endings });   // skrifað án kommu: Petur, Kristin
+  }
+  return out;
+}
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -299,7 +326,9 @@ async function calendar(body) {
   const to = new Date(body.to + 'T23:59:59Z');
   if (isNaN(from) || isNaN(to) || to - from > 62 * 86400000) return json({ error: 'bad_range' }, 400);
 
-  const feeds = FEEDS.map((f) => ({ ...f, url: Deno.env.get(f.secret) })).filter((f) => f.url);
+  const { data: profiles } = await admin().from('profiles').select('*');
+  const people = (profiles || []).map((p) => ({ id: p.id, names: namesFor(p) }));
+  const feeds = feedsFor(people.map((p) => p.id));
   if (!feeds.length) return json({ error: 'no_calendars' }, 500);
 
   const seen = new Set();
@@ -324,8 +353,8 @@ async function calendar(body) {
       const key = ev.uid + '|' + ev.start;               // sami viðburður í báðum dagatölum → einu sinni
       if (seen.has(key)) continue;
       seen.add(key);
-      const people = whoIsIt(ev.title);
-      events.push({ ...ev, id: key, people: people.length ? people : feed.fallback });
+      const who = whoIsIt(ev.title, people);
+      events.push({ ...ev, id: key, people: who.length ? who : feed.fallback });
     }
   });
 
@@ -333,9 +362,12 @@ async function calendar(body) {
   return json({ events, failed });
 }
 
-export function whoIsIt(title) {
+const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const L = 'a-záðéíóúýþæö';
+export function whoIsIt(title, people) {
   const t = ' ' + String(title || '').toLowerCase() + ' ';
-  return PEOPLE.filter((p) => p.names.some((n) => new RegExp(`(^|[^a-záðéíóúýþæö])${n}`, 'i').test(t))).map((p) => p.id);
+  return people.filter((p) => p.names.some(({ base, endings }) =>
+    new RegExp(`(^|[^${L}])${escRe(base)}(${endings.map(escRe).join('|')})(?=[^${L}]|$)`).test(t))).map((p) => p.id);
 }
 
 export function expandFeed(text, from, to) {

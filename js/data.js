@@ -1,22 +1,23 @@
 // Gagnalag: Supabase þegar lykill er settur inn, annars prufuhamur (localStorage).
-import { SUPABASE_URL, SUPABASE_ANON_KEY, CALENDAR_FUNCTION } from './config.js';
+import { authKey } from './family.js';
 
-export async function createBackend() {
-  if (SUPABASE_URL && SUPABASE_ANON_KEY) return supabaseBackend();
+// family = { code, url, key, fn } úr config.js, eða null → prufuhamur
+export async function createBackend(family) {
+  if (family?.url && family?.key) return supabaseBackend(family);
   return demoBackend();
 }
 
 // ------------------------------------------------------------------
 // Supabase (raunverulegt, deilt á milli allra síma)
 // ------------------------------------------------------------------
-async function supabaseBackend() {
+async function supabaseBackend(family) {
   const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
-  const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true, storageKey: 'fv.auth' },
+  const sb = createClient(family.url, family.key, {
+    auth: { persistSession: true, autoRefreshToken: true, storageKey: authKey(family) },
   });
   const ok = ({ data, error }) => { if (error) throw error; return data; };
   const callFn = async (body) => {
-    const { data, error } = await sb.functions.invoke(CALENDAR_FUNCTION || 'calendar', { body });
+    const { data, error } = await sb.functions.invoke(family.fn || 'clever-api', { body });
     if (error) {
       let code = 'error';
       try { code = (await error.context?.json())?.error || code; } catch { /* ekkert */ }
@@ -53,7 +54,7 @@ async function supabaseBackend() {
     async saveMeal(meal) { ok(await sb.from('meals').upsert(meal, { onConflict: 'day' })); },
     async deleteMeal(day) { ok(await sb.from('meals').delete().eq('day', day)); },
 
-    // Þjónninn (Edge Function, sjá CALENDAR_FUNCTION í config.js): dagatal + tilkynningar
+    // Þjónninn (Edge Function, sjá fn í config.js): dagatal + tilkynningar
     async listEvents(from, to) { return callFn({ from, to }); },
     async pushPublicKey() { return (await callFn({ action: 'vapid' })).publicKey; },
     async sendNotice(from, to, body) { return callFn({ action: 'send', from, to, body }); },

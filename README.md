@@ -7,13 +7,16 @@ It is a plain static web app: no build step. It is hosted on **GitHub Pages**, a
 ```
 index.html             app shell
 styles.css             all styling (light + dark mode)
-js/config.js           Supabase URL + anon key  ← the only file you edit to connect
+js/config.js           the families: each one's Supabase URL + publishable key  ← the only file you edit to connect
+js/family.js           picks which family this phone belongs to (?f=code, saved code, or asks)
 js/app.js              screens: profiles/PIN, home, shopping list, menu
 js/data.js             data layer (Supabase, or demo mode when config is empty)
 js/util.js             Icelandic dates, auto-categorising shopping items
 sw.js                  service worker (fast start, works on weak signal)
 manifest.webmanifest   home-screen app settings
 supabase/schema.sql    database tables, security rules, the 5 profiles
+supabase/ny-fjolskylda.sql  the whole database for a NEW family in one file (generated)
+tools/build_setup_sql.py    regenerates ny-fjolskylda.sql from the other .sql files
 ```
 
 ## One-time setup
@@ -22,7 +25,7 @@ supabase/schema.sql    database tables, security rules, the 5 profiles
 1. Supabase → **SQL Editor** → **New query** → paste all of `supabase/schema.sql` → **Run**.
 2. **Authentication → Users → Add user → Create new user**: one shared family email and password, with **Auto Confirm User** ticked. Everyone logs in with this once per phone.
 3. **Authentication → Sign In / Providers**: turn **off** "Allow new users to sign up", so nobody else can create an account.
-4. Put the **Project URL** and **anon / publishable key** into `js/config.js`.
+4. Put the **Project URL** and **anon / publishable key** into `FAMILIES` in `js/config.js`.
 
 ### 2. Hosting (GitHub Pages)
 Repo **Settings → Pages → Build and deployment**: Source **Deploy from a branch**, branch **main**, folder **/ (root)** → Save.
@@ -52,7 +55,9 @@ Bump `VERSION` in `sw.js` so phones pick up the new files, then push to `main`.
 ## Calendar
 The **Dagatal** tab shows the Google calendars "Heimilið" and "Heimilið vol.2", read-only. The Supabase Edge Function `supabase/functions/clever-api/index.ts` fetches each calendar's secret iCal address and expands repeating events. It assigns each event to whoever is named in the title (inflected names count: Ölmu, Thelmu, Pétri, Odds). Events with no name go to the whole family (Heimilið) or to Oddur (vol.2). An event that appears in both calendars is shown once.
 
-Setup: in Supabase **Edge Functions → Secrets**, add `ICAL_HEIMILID` and `ICAL_ODDUR` (each calendar's "Secret address in iCal format"). Then deploy the function (its name goes in `CALENDAR_FUNCTION` in `js/config.js`; currently `clever-api`) with **Verify JWT** turned off. The function checks the family login itself.
+Setup: in Supabase **Edge Functions → Secrets**, add one secret per calendar whose name starts with `ICAL_` (the value is the calendar's "Secret address in iCal format"; `webcal://` links from iCloud work too). If the rest of the name is a profile id (`ICAL_ODDUR` → `oddur`), events with no name in the title belong to that person; otherwise (`ICAL_HEIMILID`, `ICAL_FJOLSKYLDA`) to the whole family. Then deploy the function (its name goes in `fn` in `js/config.js`; currently `clever-api`) with **Verify JWT** turned off. The function checks the family login itself.
+
+Names are read from the profiles, so no code changes are needed per family. The first name and its common inflections match (Odds, Pétri, Thelmu, Ölmu, Kristínar), but only as a whole word with an inflection ending, so "annað" does not count as Anna. Nicknames or irregular forms go in the profile's `aliases` column (run `supabase/7-gaelunofn.sql` once to add it).
 
 ## Notifications
 Oddur and Kristín see a **＋** next to their avatar on the home screen. From there they send a message to the whole family or to one person. The message arrives as a push notification on every phone that has notifications turned on, and it also shows in a "Skilaboð" card on the home screen for 1 hour (`NOTICE_TTL` in `js/app.js`). Each person can close a message sooner with ×.
@@ -90,6 +95,18 @@ The "Brandari dagsins" card sits at the bottom of the home screen. Everyone gets
 - The **Notion** style comes from [better-design](https://github.com/marvkr/better-design) (`components/notion`): warm neutral colours, hairline borders, callout boxes and 4px corners. It lives as the "ÚTLIT: Notion" block at the end of `styles.css`. The full design system is also kept in Claude Design ("Fjölskylduvikan").
 - **Icons:** [Lucide](https://lucide.dev) line icons (ISC licence). Only the icons the app needs are bundled in `js/icons.js`; use them with `icon('name')`. Emoji are kept where they're content: photos, kudos, reactions, chore icons and profiles.
 - **App icon:** the family monogram, in `icons/`.
+
+## Another family (test families)
+Every family gets its **own Supabase project** (its own data, login and calendar secrets) but uses the **same app and the same link**. Updates pushed to GitHub reach every family at once.
+
+1. New Supabase project. Edit the two "BREYTTU HÉR" blocks at the top of `supabase/ny-fjolskylda.sql` (project URL, the people) and run the whole file in the SQL Editor.
+2. Add the family user (Authentication → Users), turn off sign-ups, deploy `clever-api` with Verify JWT off, add the `ICAL_…` secrets.
+3. Add the family to `FAMILIES` in `js/config.js` with a neutral code (e.g. `prufa1`, not their surname: the repo is public) and push.
+4. Send them `https://oddurhelgigudmundsson.github.io/fjolskylduvikan/?f=<code>`. A phone that opens the app without the code is asked for it once; phones set up before this change stay with the first family.
+
+**Database changes later:** a new `supabase/N-….sql` must be run on **every** family's project, and the Edge Function redeployed in each. After changing any `.sql` file, run `python3 tools/build_setup_sql.py` so new families get everything.
+
+The full step-by-step guide and the user guide for the test family are kept as Claude Docs.
 
 ## Backlog
 Ideas that have been looked at but not built are in [BACKLOG.md](BACKLOG.md), ranked by priority with an overview table at the top. Loose, unsorted ideas live in [HUGMYNDIR.md](HUGMYNDIR.md).

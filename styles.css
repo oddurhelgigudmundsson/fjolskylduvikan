@@ -714,3 +714,6 @@ input, textarea, .segmented, .segmented button, .filter, .day-chip,
 .joke-card.revealed #joke-reveal { display: none; }
 .joke-card #joke-reveal { background: var(--card); box-shadow: var(--shadow-sm); }
 @keyframes joke-in { from { opacity: 0; transform: translateY(-4px); } }
+
+/* Skipta um fjölskyldu (innskráningarskjár) */
+.link-btn { background: none; border: 0; padding: 12px 8px; margin-top: 8px; color: var(--muted); font: inherit; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
