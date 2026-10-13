@@ -148,7 +148,7 @@ Til að fá yfirlit: biddu Claude um „yfirlit yfir backlog“ og veldu númer.
 **Ákveðið**
 - **WiFi er bara í bókinni.** Þegar þarf að gefa gestum aðganginn er sýndur QR-kóði sem þeir skanna til að tengjast.
 - **Afmæli:** spjald á forsíðunni á afmælisdeginum sjálfum. Engin áminning fyrir fram og engin tilkynning.
-- **Stærðir** sjást líka efst á óskalista hvers barns („Skór 38 · Föt 152“).
+- **Stærðir eru fylltar inn af foreldrum.** Þær sjást líka efst á óskalista hvers barns („Skór 38 · Föt 152“). Kemur sér vel á ferðalögum, t.d. þegar keypt er í útlöndum.
 - **Viðkvæmt:** foreldrar geta merkt atriði „bara foreldrar“ (t.d. öryggiskóða). Börnin sjá allt annað.
 
 ## 14. Eigið dagatal hvers og eins
