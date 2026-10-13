@@ -5,7 +5,7 @@ import { initStories, loadStories, storiesBar, bindStories } from './story.js';
 import { initBook, loadBook, renderBook, birthdayHomeCard, sizesLine } from './book.js';
 import { resolveFamily, chooseFamily, forgetFamily, familyCount } from './family.js';
 
-const APP_VERSION = 'fv-v30';
+const APP_VERSION = 'fv-v31';
 import {
   DAYS, DAYS_SHORT, MONTHS, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -73,13 +73,22 @@ async function boot() {
   await startProfiles();
 }
 
+// Innskráning sem passar ekki við gagnagrunninn (t.d. eftir að skipt var um fjölskyldu)
+const isAuthError = (e) => e?.status === 401 || e?.code === 'PGRST301' || e?.code === 'PGRST303'
+  || /jwt|jws|token|unauthori[sz]ed/i.test(e?.message || '');
+
 async function startProfiles() {
   try {
     state.profiles = await state.backend.listProfiles();
   } catch (e) {
     console.error(e);
+    if (isAuthError(e)) {
+      await resetLogin();
+      return renderLogin('Innskráningin í þessum síma var úrelt. Skráðu fjölskylduaðganginn inn aftur.');
+    }
     return renderError('Gat ekki sótt prófíla. Er gagnagrunnurinn uppsettur?');
   }
+  if (!state.profiles.length) return renderError('Engir prófílar fundust fyrir þessa fjölskyldu.');
   const saved = profileById(store.get(ME_KEY));
   if (saved) { state.me = saved; return startMain(); }
   renderPicker();
@@ -159,7 +168,7 @@ async function loadMeals() {
 
 // Dagatal: sótt frá Google í gegnum Supabase. Síðasta svar geymt í tækinu
 // svo dagatalið birtist strax og líka án nets.
-const CAL_KEY = 'fv.cal';
+const CAL_KEY = 'fv.cal';                      // + fjölskyldukóði, svo dagatöl blandist ekki
 function calRange() {
   const thisWeek = startOfWeek(new Date());
   const from = new Date(Math.min(thisWeek, state.weekStart));
@@ -172,7 +181,7 @@ async function loadEvents() {
   const key = from + '|' + to;
   if (state.calKey !== key) {
     try {
-      const cached = JSON.parse(store.get(CAL_KEY) || 'null');
+      const cached = JSON.parse(store.get(CAL_KEY + (state.family?.code ? '.' + state.family.code : '')) || 'null');
       if (cached?.key === key) { state.events = cached.events; state.calStatus = 'ok'; }
       else { state.events = []; state.calStatus = 'loading'; }
     } catch { state.calStatus = 'loading'; }
@@ -184,7 +193,7 @@ async function loadEvents() {
     state.events = res.events || [];
     state.calFailed = res.failed || [];
     state.calStatus = 'ok';
-    store.set(CAL_KEY, JSON.stringify({ key, events: state.events }));
+    store.set(CAL_KEY + (state.family?.code ? '.' + state.family.code : ''), JSON.stringify({ key, events: state.events }));
   } catch (e) {
     console.error(e);
     if (state.calKey !== key) return;
@@ -287,14 +296,26 @@ function renderFamilyCode(message = '') {
   });
 }
 
+// Skráir þennan síma út og hreinsar það sem tilheyrði fyrri innskráningu
+async function resetLogin() {
+  try { await state.backend?.signOut(); } catch { /* skiptir ekki máli */ }
+  store.set(ME_KEY, null);
+  try {
+    Object.keys(localStorage).filter((k) => k.startsWith('fv.cal')).forEach((k) => localStorage.removeItem(k));
+  } catch { /* ekkert */ }
+}
+
 function renderError(msg) {
   app.innerHTML = `
     <section class="center-screen">
       <div class="brand-mark">${icon('wifi-off')}</div>
       <h1>Úbbs</h1>
       <p class="muted">${esc(msg)}</p>
-      <button class="btn primary" onclick="location.reload()">Reyna aftur</button>
+      <button class="btn primary" id="err-retry">Reyna aftur</button>
+      ${state.backend?.needsLogin ? '<button class="link-btn" id="err-reset">Skrá út og skrá inn aftur</button>' : ''}
     </section>`;
+  app.querySelector('#err-retry').addEventListener('click', () => location.reload());
+  app.querySelector('#err-reset')?.addEventListener('click', async () => { await resetLogin(); location.reload(); });
 }
 
 // ==================================================================
