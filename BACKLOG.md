@@ -22,7 +22,7 @@ Til að fá yfirlit: biddu Claude um „yfirlit yfir backlog“ og veldu númer.
 | 10 | Virkar án nets | Innkaupalistinn virkar í búðinni þótt netið detti út | Miðlungs | Í hverri búðarferð |
 | 11 | Rákir og vikuyfirlit verka | 🔥 dagar í röð, yfirlit fyrir foreldra | Lítið | Daglega |
 | 12 | Árleg heimilisverk | Dekkjaskipti, reykskynjarar, gjöld; bara foreldrar | Lítið | Nokkrum sinnum á ári |
-| 13 | Upplýsingabók fjölskyldunnar | WiFi með QR-kóða, kóðar, afmæli, fatastærðir | Miðlungs | Stundum |
+| 13 | ~~Upplýsingabók fjölskyldunnar~~ ✅ | **Komið 13. okt. 2026** | Miðlungs | Stundum |
 | 14 | Eigið dagatal hvers og eins | Tengja Google / iCloud / Outlook dagatal | Lítið–miðlungs | Daglega, ef þörf er á |
 | 15 | Krónan | Innkaupalistinn í Snjallverslun Krónunnar | Miðlungs | Í hverri pöntun |
 
@@ -134,8 +134,8 @@ Til að fá yfirlit: biddu Claude um „yfirlit yfir backlog“ og veldu númer.
 - Áminningar sem gerast einu sinni eða nokkrum sinnum á ári: nagladekk af 15. apríl, rafhlöður í reykskynjara, sía í háfnum, fasteignagjöld, æfingagjöld í byrjun annar.
 - Bara foreldrar sjá þetta. Byggir á áminningunum sem eru til, með „árlega“ eða „mánaðarlega“ endurtekningu.
 
-## 13. Upplýsingabók fjölskyldunnar
-*Skoðað 13. okt. 2026 · Stærð: miðlungs · Allt ákveðið, tilbúið í útfærslu*
+## 13. Upplýsingabók fjölskyldunnar ✅
+*Skoðað 13. okt. 2026 · **Útfært 13. okt. 2026** (js/book.js, supabase/9-upplysingabok.sql) · Stærð: miðlungs*
 
 **Hvar hún er:** í valmyndinni sem opnast þegar ýtt er á myndina þína efst → „Upplýsingabók“. Opnar heila síðu. Ekki sér flipi, því hún er uppflettirit.
 

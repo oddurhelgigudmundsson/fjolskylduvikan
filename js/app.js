@@ -2,9 +2,10 @@ import { createBackend } from './data.js';
 import { icon } from './icons.js';
 import { jokeOfTheDay } from './jokes.js';
 import { initStories, loadStories, storiesBar, bindStories } from './story.js';
+import { initBook, loadBook, renderBook, birthdayHomeCard, sizesLine } from './book.js';
 import { resolveFamily, chooseFamily, forgetFamily, familyCount } from './family.js';
 
-const APP_VERSION = 'fv-v29';
+const APP_VERSION = 'fv-v30';
 import {
   DAYS, DAYS_SHORT, MONTHS, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -33,6 +34,7 @@ const state = {
   photos: [],
   reactions: [],
   stories: [],                    // story: lifir í 24 klst
+  info: [], birthdays: [], sizes: [],   // upplýsingabók
   storyReactions: [],
   photoUrls: {},                  // slóð í geymslu → undirrituð slóð
   photoDays: 62,                  // hversu langt aftur myndir eru sóttar
@@ -88,11 +90,12 @@ async function startMain() {
     state, store, backend: state.backend, avatar, profileById, isParent, toast, openSheet, shrinkPhoto,
     renderView: () => refreshIf(['home']),
   });
+  initBook({ state, backend: state.backend, avatar, profileById, isParent, toast, openSheet, renderView, go });
   state.calFilter = store.get('fv.calfilter') || 'allir';
   renderShell();
   await Promise.all([loadItems(), loadMeals(), loadNotices(), loadReminders(), loadChores()]);
   renderView();
-  Promise.all([loadPhotos(), loadKudos(), loadWishes(), loadStories()]).then(() => refreshIf(['home', 'photos', 'kudos', 'wishes']));
+  Promise.all([loadPhotos(), loadKudos(), loadWishes(), loadStories(), loadBook()]).then(() => refreshIf(['home', 'photos', 'kudos', 'wishes', 'book']));
   loadEvents().then(() => refreshIf(['home', 'cal']));
   syncPush();
 
@@ -111,6 +114,7 @@ async function startMain() {
     state.backend.subscribe('wishes', async () => { await loadWishes(); refreshIf(['wishes']); }),
     state.backend.subscribe('stories', async () => { await loadStories(); refreshIf(['home']); }),
     state.backend.subscribe('story_reactions', async () => { await loadStories(); }),
+    ...['info_items', 'birthdays', 'sizes'].map((t) => state.backend.subscribe(t, async () => { await loadBook(); refreshIf(['book', 'home', 'wishes']); })),
   ];
 }
 
@@ -122,7 +126,7 @@ setInterval(() => {
 // Síminn vaknar (app opnað aftur af heimaskjá) → sækja nýjustu gögn
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible' || !state.me) return;
-  await Promise.all([loadItems(), loadMeals(), reloadProfiles(), loadNotices(), loadReminders(), loadChores(), loadPhotos(), loadKudos(), loadWishes(), loadStories()]);
+  await Promise.all([loadItems(), loadMeals(), reloadProfiles(), loadNotices(), loadReminders(), loadChores(), loadPhotos(), loadKudos(), loadWishes(), loadStories(), loadBook()]);
   renderView();
   await loadEvents();
   refreshIf(['home', 'cal']);
@@ -478,7 +482,7 @@ function renderView() {
   if (!view) return;
   ({
     home: renderHome, cal: renderCal, chores: renderChores, shop: renderShop, menu: renderMenu,
-    photos: renderPhotos, kudos: renderKudos, wishes: renderWishes,
+    photos: renderPhotos, kudos: renderKudos, wishes: renderWishes, book: renderBook,
   }[state.tab])(view);
   bindSubNav(view);
   const open = state.items.filter((i) => !i.checked).length;
@@ -505,6 +509,7 @@ function renderHome(view) {
 
     ${noticesCard()}
     ${pushPromptCard()}
+    ${birthdayHomeCard()}
     ${todayCard()}
 
     <button class="card tap tonight" data-go="menu">
@@ -930,6 +935,7 @@ function openMeSheet() {
       <label class="menu-file">${icon('camera')} ${state.me.photo ? 'Skipta um mynd' : 'Setja inn mynd af mér'}
         <input type="file" accept="image/*" id="photo-input" hidden></label>
       ${state.me.photo ? `<button id="remove-photo">${icon('undo-2')} Nota emoji í staðinn</button>` : ''}
+      <button id="open-book">${icon('book-open')} Upplýsingabók</button>
       <button id="switch-user">${icon('refresh-cw')} Skipta um notanda</button>
       ${pushMenuRow()}
       <button id="change-pin">${icon('key-round')} Breyta PIN-inu mínu</button>
@@ -950,6 +956,7 @@ function openMeSheet() {
     await savePhoto(null);
   });
   s.el.querySelector('#enable-push')?.addEventListener('click', async () => { s.close(); await enablePush(); });
+  s.el.querySelector('#open-book').addEventListener('click', () => { s.close(); go('book'); });
   s.el.querySelector('#switch-user').addEventListener('click', () => {
     s.close(); store.set(ME_KEY, null); state.me = null; state.tab = 'home'; renderPicker();
   });
@@ -1380,7 +1387,8 @@ function renderWishes(view) {
     <div class="filters">${people.map((p) => `
       <button class="filter ${p.id === who.id ? 'on' : ''}" data-wperson="${esc(p.id)}" style="--c:${esc(p.color)}">${avatar(p, 'sm')}<span>${esc(p.id === state.me.id ? 'Minn listi' : firstName(p.name))}</span></button>`).join('')}</div>
     <section class="hero compact"><h1>${mineList ? 'Óskalistinn minn' : `Óskalisti — ${esc(firstName(who.name))}`}</h1>
-      ${mineList ? '<p class="muted small">Hinir geta tekið frá gjafir — þú sérð aldrei hvað er frátekið 🤫</p>' : '<p class="muted small">Taktu frá það sem þú ætlar að gefa. ' + esc(firstName(who.name)) + ' sér það ekki 🤫</p>'}</section>
+      ${mineList ? '<p class="muted small">Hinir geta tekið frá gjafir — þú sérð aldrei hvað er frátekið 🤫</p>' : '<p class="muted small">Taktu frá það sem þú ætlar að gefa. ' + esc(firstName(who.name)) + ' sér það ekki 🤫</p>'}
+      ${sizesLine(who.id) ? `<p class="sizes-line">${icon('shirt')} ${esc(sizesLine(who.id))}</p>` : ''}</section>
     ${mineList ? `<button class="btn primary big" id="wish-add">${icon('plus')} Ný ósk</button>` : ''}
     ${list.length ? `<ul class="wish-list">${list.map((w) => {
       const link = safeUrl(w.url);

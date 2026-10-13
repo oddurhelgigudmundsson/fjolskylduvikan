@@ -96,6 +96,14 @@ Round avatars at the top of the home screen. Anyone can post one or more photos 
 - Photos are shrunk to 1440px and kept in the same locked `myndir` bucket under `story/`. The 5-minute clock in `clever-api` deletes expired photos from storage, so space doesn't fill up.
 - Code: `js/story.js`. Database: run `supabase/8-story.sql` once, and redeploy `clever-api` so expired photos get cleaned up.
 
+## Upplýsingabók (family info book)
+Opened from the menu when you tap your own avatar at the top → **Upplýsingabók**. Code: `js/book.js`. Database: run `supabase/9-upplysingabok.sql` once.
+
+- **Heimilið:** WiFi networks and codes (e.g. a key box). Values are hidden until you tap the eye. A WiFi network has a **QR code for guests**: they point their phone camera at it and join (standard `WIFI:` format). Parents add and edit; an item can be marked **Bara foreldrar** so the kids never see it.
+- **Afmæli:** the family's own birthdays (a birth date on each profile, set by parents) plus extended family (anyone can add; year is optional). A card shows on the home screen **on the day itself** only, with no reminder before and no notification.
+- **Stærðir:** clothes, trousers, shoes and other per person. Parents fill them in; kids **15 and older** can edit their own (age comes from the birth date). The sizes also show at the top of that person's wishlist.
+- The WiFi QR code is drawn by `js/vendor/qrcode.js` (qrcode-generator, MIT), loaded only when needed.
+
 ## Joke of the day
 The "Brandari dagsins" card sits at the bottom of the home screen. Everyone gets the same joke that day, and all the jokes in `js/jokes.js` come round before any repeats. Question jokes hide their punchline behind "Sjá svarið". To add a joke, add a line `{ q: '…', a: '…' }` to `js/jokes.js`.
 

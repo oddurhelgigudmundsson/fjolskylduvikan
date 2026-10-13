@@ -769,3 +769,44 @@ input, textarea, .segmented, .segmented button, .filter, .day-chip,
   background: rgba(255,255,255,.1); color: #fff; font: inherit; font-size: 14px; cursor: pointer; }
 .sv-del .i { width: 16px; height: 16px; }
 .sv-del.confirm { background: var(--c-red-t); }
+
+/* =====================================================================
+   Upplýsingabók
+   ===================================================================== */
+.back-link { display: inline-flex; align-items: center; gap: 2px; margin: 0 0 4px -4px; padding: 4px; }
+.book-list { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-direction: column; }
+.book-row { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 0; border-top: 1px solid var(--line); }
+.book-row:first-child { border-top: 0; }
+.book-ic { display: grid; place-items: center; flex: none; width: 26px; height: 26px; color: var(--muted); }
+.book-ic .i { width: 18px; height: 18px; }
+.book-main { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 4px 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.book-main:disabled { cursor: default; color: inherit; opacity: 1; }
+.book-title { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-weight: 600; }
+.book-title .pill { font-size: 11px; padding: 1px 6px; font-weight: 500; }
+.book-title .pill .i { width: 11px; height: 11px; vertical-align: -1px; }
+.book-value { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 15px; letter-spacing: .08em; color: var(--muted); word-break: break-all; }
+.book-value.shown { color: var(--ink); letter-spacing: .02em; }
+.book-when { flex: none; font-size: 13px; color: var(--muted); }
+.book-when.today { color: var(--c-red-t); font-weight: 600; }
+.book-edit { flex: none; color: var(--muted); }
+.book-edit .i { width: 16px; height: 16px; }
+.book-row .icon-btn { flex: none; display: grid; place-items: center; width: 38px; height: 38px; padding: 0; border: 0; border-radius: 4px; background: var(--fill); color: var(--ink); cursor: pointer; }
+.book-row .icon-btn .i { width: 18px; height: 18px; }
+
+.qr-box { align-self: center; width: min(78vw, 300px); padding: 14px; border-radius: 4px; background: #fff; }
+.qr-box svg { display: block; width: 100%; height: auto; }
+.qr-pass { text-align: center; margin: 0; }
+.qr-pass strong { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.sheet h2 .i { width: 20px; height: 20px; vertical-align: -3px; }
+
+.date-row { display: flex; gap: 8px; }
+.date-row .field { width: 76px; }
+.date-row .field.grow { flex: 1; width: auto; }
+.date-row select { width: 100%; font: inherit; font-size: 16px; color: var(--ink); background: var(--fill); border: 0; border-radius: 4px; padding: 11px 10px; appearance: none; -webkit-appearance: none; }
+
+.birthday-card { background: var(--c-yellow, var(--card)); border-color: transparent; }
+.bday-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+.bday-row > div { display: flex; flex-direction: column; }
+.bday-cake { font-size: 20px; width: 26px; text-align: center; }
+.sizes-line { display: inline-flex; align-items: center; gap: 6px; margin: 6px 0 0; padding: 4px 8px; border-radius: 4px; background: var(--fill); font-size: 14px; }
+.sizes-line .i { width: 15px; height: 15px; color: var(--muted); }

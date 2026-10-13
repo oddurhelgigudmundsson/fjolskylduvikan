@@ -130,6 +130,29 @@ async function supabaseBackend(family) {
     },
     async deleteWish(id) { ok(await sb.from('wishes').delete().eq('id', id)); },
 
+    // ---- Upplýsingabók ----
+    async listInfo() { return ok(await sb.from('info_items').select('*').order('sort').order('created_at')); },
+    async saveInfo(item) {
+      const { id, ...row } = item;
+      if (id) ok(await sb.from('info_items').update(row).eq('id', id));
+      else ok(await sb.from('info_items').insert(row));
+    },
+    async deleteInfo(id) { ok(await sb.from('info_items').delete().eq('id', id)); },
+    async listBirthdays() { return ok(await sb.from('birthdays').select('*').order('month').order('day')); },
+    async saveBirthday(b) {
+      const { id, ...row } = b;
+      if (id) ok(await sb.from('birthdays').update(row).eq('id', id));
+      else ok(await sb.from('birthdays').insert(row));
+    },
+    async deleteBirthday(id) { ok(await sb.from('birthdays').delete().eq('id', id)); },
+    async setProfileBirthday(id, birthday) {
+      const { data, error } = await sb.from('profiles').update({ birthday }).eq('id', id).select('id');
+      if (error) throw Object.assign(error, { code: /birthday/.test(error.message || '') ? 'no_column' : error.code });
+      if (!data?.length) throw new Error('not_saved');
+    },
+    async listSizes() { return ok(await sb.from('sizes').select('*')); },
+    async saveSizes(row) { ok(await sb.from('sizes').upsert({ ...row, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' })); },
+
     async listChores() { return ok(await sb.from('chores').select('*').order('sort').order('created_at')); },
     async saveChore(c) {
       const { id, ...row } = c;
@@ -315,6 +338,35 @@ function demoBackend() {
       commit('wishes');
     },
     async deleteWish(id) { read().wishes = read().wishes.filter((x) => x.id !== id); commit('wishes'); },
+
+    async listInfo() { const d = read(); if (!d.info) { Object.assign(d, demoBook()); write(); } return clone(d.info); },
+    async saveInfo(item) {
+      const d = read();
+      if (item.id) Object.assign(d.info.find((x) => x.id === item.id) || {}, item);
+      else d.info.push({ id: uid(), sort: 0, created_at: new Date().toISOString(), parents_only: false, ...item });
+      commit('info_items');
+    },
+    async deleteInfo(id) { read().info = read().info.filter((x) => x.id !== id); commit('info_items'); },
+    async listBirthdays() { const d = read(); if (!d.birthdays) { Object.assign(d, demoBook()); write(); } return clone(d.birthdays); },
+    async saveBirthday(b) {
+      const d = read();
+      if (b.id) Object.assign(d.birthdays.find((x) => x.id === b.id) || {}, b);
+      else d.birthdays.push({ id: uid(), created_at: new Date().toISOString(), ...b });
+      commit('birthdays');
+    },
+    async deleteBirthday(id) { read().birthdays = read().birthdays.filter((x) => x.id !== id); commit('birthdays'); },
+    async setProfileBirthday(id, birthday) {
+      const p = read().profiles.find((x) => x.id === id);
+      if (p) p.birthday = birthday;
+      commit('profiles');
+    },
+    async listSizes() { const d = read(); if (!d.sizes) { Object.assign(d, demoBook()); write(); } return clone(d.sizes); },
+    async saveSizes(row) {
+      const d = read();
+      d.sizes = d.sizes.filter((x) => x.profile_id !== row.profile_id);
+      d.sizes.push({ ...row, updated_at: new Date().toISOString() });
+      commit('sizes');
+    },
 
     async listChores() {
       const d = read();
@@ -503,6 +555,25 @@ function demoEvents() {
   return list.sort((a, b) => a.start.localeCompare(b.start));
 }
 
+// Upplýsingabókin í prufuham: eitt WiFi, einn kóði bara fyrir foreldra, afmæli í dag
+function demoBook() {
+  const now = new Date();
+  return {
+    info: [
+      { id: uid(), kind: 'wifi', title: 'Heimilið', value: 'sumar-i-reykjavik', parents_only: false, sort: 1, created_at: now.toISOString() },
+      { id: uid(), kind: 'code', title: 'Lyklabox við útidyr', value: '4821', parents_only: true, sort: 2, created_at: now.toISOString() },
+    ],
+    birthdays: [
+      { id: uid(), name: 'Amma Sigga', month: now.getMonth() + 1, day: now.getDate(), year: 1951, created_at: now.toISOString() },
+      { id: uid(), name: 'Afi Jón', month: 3, day: 14, year: 1948, created_at: now.toISOString() },
+    ],
+    sizes: [
+      { profile_id: 'alma', clothes: '146', pants: '146', shoes: '36', other: null },
+      { profile_id: 'petur', clothes: 'M', pants: '30/32', shoes: '43', other: 'Takkaskór 43' },
+    ],
+  };
+}
+
 function seed() {
   const monday = new Date();
   monday.setHours(12, 0, 0, 0);
@@ -520,9 +591,9 @@ function seed() {
     profiles: [
       { id: 'oddur',   name: 'Oddur',       role: 'parent', color: '#2563EB', emoji: '🏃', pin_hash: null, sort: 1 },
       { id: 'kristin', name: 'Kristín',     role: 'parent', color: '#DB2777', emoji: '🌸', pin_hash: null, sort: 2 },
-      { id: 'alma',    name: 'Alma Rún',    role: 'child',  color: '#7C3AED', emoji: '🦄', pin_hash: null, sort: 3 },
-      { id: 'thelma',  name: 'Thelma Lind', role: 'child',  color: '#059669', emoji: '🌿', pin_hash: null, sort: 4 },
-      { id: 'petur',   name: 'Pétur Ingi',  role: 'child',  color: '#EA580C', emoji: '⚽', pin_hash: null, sort: 5 },
+      { id: 'alma',    name: 'Alma Rún',    role: 'child',  color: '#7C3AED', emoji: '🦄', pin_hash: null, sort: 3, birthday: '2015-05-20' },
+      { id: 'thelma',  name: 'Thelma Lind', role: 'child',  color: '#059669', emoji: '🌿', pin_hash: null, sort: 4, birthday: '2013-02-08' },
+      { id: 'petur',   name: 'Pétur Ingi',  role: 'child',  color: '#EA580C', emoji: '⚽', pin_hash: null, sort: 5, birthday: '2010-08-30' },
     ],
     items: [
       item('Mjólk', 'Mjólkurvörur og egg', 'kristin', 1),
