@@ -92,4 +92,4 @@ The "Brandari dagsins" card sits at the bottom of the home screen. Everyone gets
 - **App icon:** the family monogram, in `icons/`.
 
 ## Backlog
-Ideas that have been looked at but not built are in [BACKLOG.md](BACKLOG.md), ranked by priority with an overview table at the top.
+Ideas that have been looked at but not built are in [BACKLOG.md](BACKLOG.md), ranked by priority with an overview table at the top. Loose, unsorted ideas live in [HUGMYNDIR.md](HUGMYNDIR.md).
