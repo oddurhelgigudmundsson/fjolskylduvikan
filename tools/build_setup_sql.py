@@ -26,7 +26,9 @@ HEAD = """\
 -- BREYTTU HÉR (1 af 2): "Project URL" úr Project Settings → API,
 -- og nafnið á fallinu í Edge Functions (yfirleitt clever-api).
 -- ---------------------------------------------------------------------
-create temp table _uppsetning as select
+drop schema if exists uppsetning cascade;
+create schema uppsetning;   -- geymir stillingarnar á meðan skráin keyrir; eytt í lokin
+create table uppsetning.slod as select
   'https://XXXXXXXXXXXX.supabase.co'::text as project_url,
   'clever-api'::text                       as fn;
 
@@ -38,8 +40,8 @@ create temp table _uppsetning as select
 --   litur, emoji – það sem birtist í appinu
 --   gælunöfn – annað sem stendur í dagatalinu, t.d. '{Gunna}' (má vera '{}')
 -- ---------------------------------------------------------------------
-create temp table _folk (id text, nafn text, hlutverk text, litur text, emoji text, rod int, gaelunofn text[]);
-insert into _folk values
+create table uppsetning.folk (id text, nafn text, hlutverk text, litur text, emoji text, rod int, gaelunofn text[]);
+insert into uppsetning.folk values
   ('mamma', 'Mamma',  'parent', '#2563EB', '🏃', 1, '{}'),
   ('pabbi', 'Pabbi',  'parent', '#DB2777', '🌸', 2, '{}'),
   ('barn1', 'Barn 1', 'child',  '#7C3AED', '🦄', 3, '{}'),
@@ -48,7 +50,7 @@ insert into _folk values
 -- Stoppar ef gleymdist að breyta slóðinni (þá gerist ekkert)
 do $$
 begin
-  if (select project_url from _uppsetning) like '%XXXX%' then
+  if (select project_url from uppsetning.slod) like '%XXXX%' then
     raise exception 'Settu "Project URL" efst í skjalið (BREYTTU HÉR 1 af 2) og keyrðu aftur.';
   end if;
 end $$;
@@ -58,7 +60,7 @@ PROFILES_INSERT = """\
 alter table public.profiles add column if not exists aliases text[] not null default '{}';
 
 insert into public.profiles (id, name, role, color, emoji, sort, aliases)
-select id, nafn, hlutverk, litur, emoji, rod, gaelunofn from _folk
+select id, nafn, hlutverk, litur, emoji, rod, gaelunofn from uppsetning.folk
 on conflict (id) do update
   set name = excluded.name, role = excluded.role, color = excluded.color,
       emoji = excluded.emoji, sort = excluded.sort, aliases = excluded.aliases;"""
@@ -67,7 +69,7 @@ CRON = """\
 do $$
 declare u text;
 begin
-  select project_url || '/functions/v1/' || fn into u from _uppsetning;
+  select project_url || '/functions/v1/' || fn into u from uppsetning.slod;
   perform cron.schedule(
     'fjolskylduvikan-aminningar',
     '*/5 * * * *',
@@ -97,7 +99,7 @@ def main():
             assert n == 1, 'fann ekki klukkuna í 4-aminningar.sql'
         assert 'kuqxnwxcocxecxxwczqm' not in text, f'slóð okkar fjölskyldu er enn í {name}'
         out.append(f'\n-- =====================================================================\n-- {name}\n-- =====================================================================\n{text.strip()}\n')
-    out.append('\ndrop table if exists _folk;\ndrop table if exists _uppsetning;\n\n-- Búið. Næst: Authentication → Users → Add user (sjá leiðbeiningarnar).\n')
+    out.append('\ndrop schema if exists uppsetning cascade;\n\n-- Búið. Næst: Authentication → Users → Add user (sjá leiðbeiningarnar).\n')
     (SQL / 'ny-fjolskylda.sql').write_text(''.join(out))
     print('skrifaði', SQL / 'ny-fjolskylda.sql')
 
