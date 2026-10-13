@@ -723,17 +723,18 @@ input, textarea, .segmented, .segmented button, .filter, .day-chip,
    ===================================================================== */
 .story-bar { display: flex; gap: 14px; overflow-x: auto; margin: -4px -16px 0; padding: 4px 16px 2px; scrollbar-width: none; }
 .story-bar::-webkit-scrollbar { display: none; }
-.story-item { position: relative; flex: none; display: flex; flex-direction: column; align-items: center; gap: 5px; width: 66px; }
-.story-ring { display: grid; place-items: center; width: 66px; height: 66px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }
+.story-item { position: relative; flex: none; display: flex; flex-direction: column; align-items: center; gap: 5px; width: 70px; }
+.story-ring { display: grid; place-items: center; width: 70px; height: 70px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }
 .story-ring .avatar { width: 56px; height: 56px; font-size: 30px; }
-.story-ring.unseen { background: var(--c); }                        /* óséð: hringur í lit viðkomandi */
+/* óséð: 4px hringur, litaskipting í lit viðkomandi (ljósari → litur → dekkri) */
+.story-ring.unseen { background: conic-gradient(from 210deg, color-mix(in srgb, var(--c) 45%, #fff), var(--c), color-mix(in srgb, var(--c) 70%, #000), var(--c), color-mix(in srgb, var(--c) 45%, #fff)); }
 .story-ring.unseen .avatar { box-shadow: 0 0 0 3px var(--bg); }
 .story-ring.seen { background: none; }                               /* séð: hringurinn hverfur */
 .story-ring.empty .avatar { opacity: .9; }
 .story-ring:active { transform: scale(.95); }
-.story-plus { position: absolute; top: 44px; right: 2px; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 2px solid var(--bg); border-radius: 50%; background: var(--accent); color: #fff; cursor: pointer; }
+.story-plus { position: absolute; top: 48px; right: 2px; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 2px solid var(--bg); border-radius: 50%; background: var(--accent); color: #fff; cursor: pointer; }
 .story-plus .i { width: 13px; height: 13px; stroke-width: 3; }
-.story-name { max-width: 66px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--muted); }
+.story-name { max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--muted); }
 
 .story-picks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 4px 0 14px; }
 .story-picks img { width: 100%; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 4px; background: var(--line); }
