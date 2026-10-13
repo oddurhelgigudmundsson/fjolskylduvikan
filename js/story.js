@@ -59,7 +59,7 @@ function groups() {
   const byPerson = new Map();
   for (const st of live()) (byPerson.get(st.profile_id) || byPerson.set(st.profile_id, []).get(st.profile_id)).push(st);
   const list = [...byPerson.entries()]
-    .map(([id, stories]) => ({ profile: ctx.profileById(id), stories, unseen: id !== state.me.id && stories.some((x) => !s.has(x.id)), last: stories[stories.length - 1].created_at }))
+    .map(([id, stories]) => ({ profile: ctx.profileById(id), stories, unseen: stories.some((x) => !s.has(x.id)), last: stories[stories.length - 1].created_at }))
     .filter((g) => g.profile);
   const mine = list.find((g) => g.profile.id === state.me.id);
   const others = list.filter((g) => g.profile.id !== state.me.id)
@@ -75,7 +75,7 @@ export function storiesBar() {
   const { mine, others } = groups();
   const ring = (g, label) => `
     <div class="story-item">
-      <button class="story-ring ${g.unseen ? 'unseen' : 'seen'}" data-story-open="${esc(g.profile.id)}" aria-label="Story frá ${esc(g.profile.name)}">
+      <button class="story-ring ${g.unseen ? 'unseen' : 'seen'}" style="--c:${esc(g.profile.color)}" data-story-open="${esc(g.profile.id)}" aria-label="Story frá ${esc(g.profile.name)}">
         ${avatar(g.profile, 'lg')}</button>
       <span class="story-name">${esc(label)}</span>
     </div>`;
@@ -83,7 +83,7 @@ export function storiesBar() {
     <section class="story-bar" aria-label="Story">
       <div class="story-item">
         ${mine
-          ? `<button class="story-ring ${mine.unseen ? 'unseen' : 'seen'}" data-story-open="${esc(state.me.id)}" aria-label="Story-ið mitt">${avatar(state.me, 'lg')}</button>`
+          ? `<button class="story-ring ${mine.unseen ? 'unseen' : 'seen'}" style="--c:${esc(state.me.color)}" data-story-open="${esc(state.me.id)}" aria-label="Story-ið mitt">${avatar(state.me, 'lg')}</button>`
           : `<button class="story-ring empty" data-story-add aria-label="Setja inn story">${avatar(state.me, 'lg')}</button>`}
         <button class="story-plus" data-story-add aria-label="Setja inn story">${icon('plus')}</button>
         <span class="story-name">Þú</span>

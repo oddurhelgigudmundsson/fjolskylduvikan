@@ -4,7 +4,7 @@ import { jokeOfTheDay } from './jokes.js';
 import { initStories, loadStories, storiesBar, bindStories } from './story.js';
 import { resolveFamily, chooseFamily, forgetFamily, familyCount } from './family.js';
 
-const APP_VERSION = 'fv-v27';
+const APP_VERSION = 'fv-v28';
 import {
   DAYS, DAYS_SHORT, MONTHS, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
