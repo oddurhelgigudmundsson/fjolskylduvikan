@@ -92,4 +92,4 @@ The "Brandari dagsins" card sits at the bottom of the home screen. Everyone gets
 - **App icon:** the family monogram, in `icons/`.
 
 ## Backlog
-Ideas that have been looked at but not built are in [BACKLOG.md](BACKLOG.md): sending the shopping list to Krónan, and connecting each person's own calendar.
+Ideas that have been looked at but not built are in [BACKLOG.md](BACKLOG.md), ranked by priority with an overview table at the top.
