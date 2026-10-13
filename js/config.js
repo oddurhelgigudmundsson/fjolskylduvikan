@@ -15,8 +15,8 @@
 export const FAMILIES = {
   okatp: {
     name: 'Fjölskylduvikan',
-    url: 'https://kuqxnwxcocxecxxwczqm.supabase.co',
-    key: 'sb_publishable__isNdG954mu5XoGnxdifiw_jta0WfpD',
+    url: 'https://faeylmhhwoqwfcegjadg.supabase.co',
+    key: 'sb_publishable_ezeXx6GCteR-gdRTfgEojQ_p3UOQqrS',
     fn: 'clever-api',
   },
   // prufa1: {
