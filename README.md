@@ -75,3 +75,21 @@ A fixed "📌 Áminningar" card sits at the top of everyone's home screen and sh
 - Each chore is either `each` (everyone does their own, like making the bed) or `anyone` (first one to do it gets the points, like taking out the trash). Each chore also has its points, its weekdays, and optionally which kids it's for.
 - Parents manage chores under **⚙️ Sýsla með verkin**.
 - Database: run `supabase/5-heimilisverk.sql` once. It also adds the six starter chores.
+
+## Saman (photos, kudos, wishlists)
+The **Saman** tab has three parts. (Innkaup and Matseðill share the **Matur** tab.)
+- **📸 Photo of the day:** everyone can post one photo a day, and it must be taken that day. "Taka mynd" opens the camera; a photo picked from the library must carry today's capture date (EXIF), otherwise it's refused. Photos are shrunk to 1440px and stored in the private Storage bucket `myndir`, readable only by the signed-in family through signed links. The family can react with ❤️😂😍👏🔥. "Árið okkar" shows every photo by month. At 18:00, if nobody has posted a photo that day, everyone gets a reminder.
+- **💛 Kudos:** anyone sends kudos to one person or to everyone. The recipient gets a notification, and everyone sees the wall. Today's kudos show on the home screen.
+- **🎁 Wishlists:** each person keeps their own list. Others can reserve an item ("Ég kaupi þessa"), and the owner never sees what's been reserved. The owner marks "Fékk þetta" to remove an item.
+- Database: run `supabase/6-saman.sql` once. It creates the tables and the Storage bucket.
+
+## Joke of the day
+The "Brandari dagsins" card sits at the bottom of the home screen. Everyone gets the same joke that day, and all the jokes in `js/jokes.js` come round before any repeats. Question jokes hide their punchline behind "Sjá svarið". To add a joke, add a line `{ q: '…', a: '…' }` to `js/jokes.js`.
+
+## Look
+- The **Notion** style comes from [better-design](https://github.com/marvkr/better-design) (`components/notion`): warm neutral colours, hairline borders, callout boxes and 4px corners. It lives as the "ÚTLIT: Notion" block at the end of `styles.css`. The full design system is also kept in Claude Design ("Fjölskylduvikan").
+- **Icons:** [Lucide](https://lucide.dev) line icons (ISC licence). Only the icons the app needs are bundled in `js/icons.js`; use them with `icon('name')`. Emoji are kept where they're content: photos, kudos, reactions, chore icons and profiles.
+- **App icon:** the family monogram, in `icons/`.
+
+## Backlog
+Ideas that have been looked at but not built are in [BACKLOG.md](BACKLOG.md): sending the shopping list to Krónan, and connecting each person's own calendar.
