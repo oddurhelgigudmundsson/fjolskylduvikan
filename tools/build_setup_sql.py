@@ -10,7 +10,7 @@ import re
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SQL = ROOT / 'supabase'
 PARTS = ['schema.sql', '2-myndir.sql', '7-gaelunofn.sql', '3-tilkynningar.sql',
-         '4-aminningar.sql', '5-heimilisverk.sql', '6-saman.sql']
+         '4-aminningar.sql', '5-heimilisverk.sql', '6-saman.sql', '8-story.sql']
 
 HEAD = """\
 -- =====================================================================

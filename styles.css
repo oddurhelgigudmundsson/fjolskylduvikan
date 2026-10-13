@@ -717,3 +717,54 @@ input, textarea, .segmented, .segmented button, .filter, .day-chip,
 
 /* Skipta um fjölskyldu (innskráningarskjár) */
 .link-btn { background: none; border: 0; padding: 12px 8px; margin-top: 8px; color: var(--muted); font: inherit; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+/* =====================================================================
+   Story: hringir á forsíðu + skoðari á fullum skjá
+   ===================================================================== */
+.story-bar { display: flex; gap: 14px; overflow-x: auto; margin: -4px -16px 0; padding: 4px 16px 2px; scrollbar-width: none; }
+.story-bar::-webkit-scrollbar { display: none; }
+.story-item { position: relative; flex: none; display: flex; flex-direction: column; align-items: center; gap: 5px; width: 66px; }
+.story-ring { display: grid; place-items: center; width: 66px; height: 66px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }
+.story-ring .avatar { width: 56px; height: 56px; font-size: 30px; }
+.story-ring.unseen { background: conic-gradient(from 200deg, var(--accent), var(--c-pink-t), var(--c-orange-t), var(--accent)); }
+.story-ring.unseen .avatar, .story-ring.seen .avatar { box-shadow: 0 0 0 3px var(--bg); }
+.story-ring.seen { background: var(--line); }
+.story-ring.empty .avatar { opacity: .9; }
+.story-ring:active { transform: scale(.95); }
+.story-plus { position: absolute; top: 44px; right: 2px; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 2px solid var(--bg); border-radius: 50%; background: var(--accent); color: #fff; cursor: pointer; }
+.story-plus .i { width: 13px; height: 13px; stroke-width: 3; }
+.story-name { max-width: 66px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--muted); }
+
+.story-picks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 4px 0 14px; }
+.story-picks img { width: 100%; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 4px; background: var(--line); }
+.story-picks.one { grid-template-columns: 1fr; }
+.story-picks.one img { aspect-ratio: auto; max-height: 50dvh; object-fit: contain; background: #000; }
+
+.story-viewer { position: fixed; inset: 0; z-index: 55; display: flex; flex-direction: column; background: #000; color: #fff; -webkit-touch-callout: none;
+  opacity: 0; transition: opacity .18s; touch-action: none; user-select: none; -webkit-user-select: none; }
+.story-viewer.open { opacity: 1; }
+.story-viewer.closing { opacity: 0; }
+.sv-stage { position: relative; flex: 1; min-height: 0; transition: transform .15s; }
+.sv-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; -webkit-user-drag: none; pointer-events: none; }
+.sv-top { position: absolute; inset: 0 0 auto; z-index: 2; padding: calc(env(safe-area-inset-top) + 8px) 10px 24px;
+  background: linear-gradient(rgba(0,0,0,.45), transparent); transition: opacity .2s; }
+.story-viewer.held .sv-top, .story-viewer.held .sv-foot { opacity: 0; }
+.sv-bars { display: flex; gap: 3px; }
+.sv-bar { flex: 1; height: 2.5px; border-radius: 2px; background: rgba(255,255,255,.35); overflow: hidden; }
+.sv-bar i { display: block; height: 100%; width: 0; background: #fff; }
+.sv-head { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 14px; }
+.sv-head .avatar { box-shadow: 0 0 0 1.5px rgba(255,255,255,.8); }
+.sv-ago { color: rgba(255,255,255,.7); }
+.sv-close { margin-left: auto; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; background: none; color: #fff; cursor: pointer; }
+.sv-close .i { width: 26px; height: 26px; }
+.sv-tap { position: absolute; inset: 0; z-index: 1; }
+.sv-foot { padding: 10px 14px calc(env(safe-area-inset-bottom) + 12px); transition: opacity .2s; }
+.sv-react { display: flex; justify-content: space-between; gap: 6px; }
+.sv-react button { flex: 1; display: grid; place-items: center; padding: 8px 0; border: 0; border-radius: 4px; background: rgba(255,255,255,.1); font-size: 24px; cursor: pointer; transition: transform .12s; }
+.sv-react button.on { background: rgba(255,255,255,.28); box-shadow: inset 0 0 0 1.5px #fff; }
+.sv-react button:active { transform: scale(1.15); }
+.sv-who { margin: 8px 0 0; font-size: 13px; color: rgba(255,255,255,.75); text-align: center; }
+.sv-del { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 10px; padding: 10px; border: 0; border-radius: 4px;
+  background: rgba(255,255,255,.1); color: #fff; font: inherit; font-size: 14px; cursor: pointer; }
+.sv-del .i { width: 16px; height: 16px; }
+.sv-del.confirm { background: var(--c-red-t); }

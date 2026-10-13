@@ -1,10 +1,10 @@
 // Service worker: geymir sjálft appið svo það opnist hratt.
 // Gögnin (Supabase) eru alltaf sótt beint og aldrei geymd hér.
 // Hækkaðu VERSION þegar ný útgáfa er sett út.
-const VERSION = 'fv-v27';
+const VERSION = 'fv-v28';
 const SHELL = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
-  'js/app.js', 'js/data.js', 'js/util.js', 'js/config.js', 'js/family.js', 'js/icons.js', 'js/jokes.js',
+  'js/app.js', 'js/data.js', 'js/util.js', 'js/config.js', 'js/family.js', 'js/story.js', 'js/icons.js', 'js/jokes.js',
   'icons/apple-touch-icon.png', 'icons/icon-192.png',
 ];
 

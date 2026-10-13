@@ -7,7 +7,7 @@
 // 4) Heimilisverk: foreldrar fá tilkynningu þegar verk bíður samþykkis, og börnin
 //    þegar það er samþykkt. (Sigurvegara vikunnar tilkynna foreldrarnir sjálfir.)
 // 5) Saman: sá sem fær hrós fær tilkynningu, og kl. 18 fá allir áminningu ef
-//    engin mynd dagsins er komin.
+//    engin mynd dagsins er komin. Útrunnum story-myndum (24 klst) er eytt.
 //
 // Leyndarmál (Supabase → Edge Functions → Secrets): eitt fyrir hvert dagatal.
 //   ICAL_<eitthvað>  – leynileg iCal-slóð dagatals (Google, iCloud, Outlook…)
@@ -81,6 +81,7 @@ Deno.serve(async (req) => {
       if (!data?.value?.key || data.value.key !== cronKey) return json({ error: 'forbidden' }, 403);
       const out = await runReminders();
       out.photoNudge = await photoNudge();
+      out.stories = await cleanupStories();
       return json(out);
     } catch (e) {
       console.error(e);
@@ -316,6 +317,16 @@ async function photoNudge() {
   if (mark.error) return null;                                     // þegar sent í dag
   const r = await pushTo(db, null, { title: '📸 Mynd dagsins', body: 'Engin mynd dagsins ennþá — hver tekur hana?', tag: 'photo-' + now.day, url: './' });
   return { sent: r.sent };
+}
+
+// Story lifir í 24 klst: útrunnar myndir fjarlægðar úr geymslunni og töflunni
+async function cleanupStories() {
+  const db = admin();
+  const { data, error } = await db.from('stories').select('id, path').lt('expires_at', new Date().toISOString()).limit(200);
+  if (error || !data?.length) return error ? { error: error.message } : { removed: 0 };
+  await db.storage.from('myndir').remove(data.map((s) => s.path));
+  await db.from('stories').delete().in('id', data.map((s) => s.id));
+  return { removed: data.length };
 }
 
 // ------------------------------------------------------------------

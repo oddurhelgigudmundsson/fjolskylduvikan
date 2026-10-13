@@ -88,6 +88,14 @@ The **Saman** tab has three parts. (Innkaup and Matseðill share the **Matur** t
 - **🎁 Wishlists:** each person keeps their own list. Others can reserve an item ("Ég kaupi þessa"), and the owner never sees what's been reserved. The owner marks "Fékk þetta" to remove an item.
 - Database: run `supabase/6-saman.sql` once. It creates the tables and the Storage bucket.
 
+## Story
+Round avatars at the top of the home screen. Anyone can post one or more photos (new or old, from the camera or the library), and they disappear after **24 hours**. A coloured ring means there's something you haven't seen yet (remembered on this phone only, never shown to others). There is no "seen by" list and no notification when someone posts.
+
+- Tap a ring to watch full screen: tap right = next, left = back, hold = pause, swipe down = close. When one person's photos end, the next person's start.
+- Emoji reactions (❤️😂😍👏🔥) like on Photo of the day. You can delete your own story early; parents can also take down a child's.
+- Photos are shrunk to 1440px and kept in the same locked `myndir` bucket under `story/`. The 5-minute clock in `clever-api` deletes expired photos from storage, so space doesn't fill up.
+- Code: `js/story.js`. Database: run `supabase/8-story.sql` once, and redeploy `clever-api` so expired photos get cleaned up.
+
 ## Joke of the day
 The "Brandari dagsins" card sits at the bottom of the home screen. Everyone gets the same joke that day, and all the jokes in `js/jokes.js` come round before any repeats. Question jokes hide their punchline behind "Sjá svarið". To add a joke, add a line `{ q: '…', a: '…' }` to `js/jokes.js`.
 

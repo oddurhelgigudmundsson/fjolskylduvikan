@@ -13,7 +13,7 @@ Til að fá yfirlit: biddu Claude um „yfirlit yfir backlog“ og veldu númer.
 | 1 | Ertu í mat í kvöld? | Já / Nei / Seinn fyrir kl. 16, fjöldi í mat sést strax | Lítið | Daglega |
 | 2 | Uppáhalds á innkaupalistanum | Algengar vörur sem takkar, eitt ýt á listann | Lítið | Daglega |
 | 3 | Sunnudagsyfirlitið | Einn skjár fyrir fjölskyldufundinn: stig, bikar, næsta vika | Miðlungs | Vikulega |
-| 4 | Story | Myndir sem lifa í 24 klst, eins og á Instagram | Miðlungs | Daglega |
+| 4 | ~~Story~~ ✅ | **Komið 13. okt. 2026** | Miðlungs | Daglega |
 | 5 | Næst á dagskrá og leit | „Næst: Æfing eftir 45 mín“ á forsíðu, leit í dagatali | Lítið | Daglega |
 | 6 | Uppskriftabanki | Vistaðir réttir, „Sama og síðasta vika“ á matseðil | Miðlungs | Vikulega |
 | 7 | Hver skutlar? | „Ég tek það“ á viðburðum, áminning til bílstjórans | Miðlungs | Nokkrum sinnum í viku |
@@ -51,8 +51,8 @@ Til að fá yfirlit: biddu Claude um „yfirlit yfir backlog“ og veldu númer.
 - Næsta vika í dagatalinu, matseðill sem á eftir að skipuleggja, myndir vikunnar og hrós vikunnar.
 - Passar við bikarinn sem þið tilkynnið sjálf á sunnudögum.
 
-## 4. Story
-*Skoðað 13. okt. 2026 · Stærð: miðlungs (um dagur) · Allt ákveðið, tilbúið í útfærslu*
+## 4. Story ✅
+*Skoðað 13. okt. 2026 · **Útfært 13. okt. 2026** (js/story.js, supabase/8-story.sql) · Stærð: miðlungs*
 
 **Hugmyndin:** Eins og story á Instagram, bara fyrir fjölskylduna. Myndir sem lifa í 24 klukkutíma og hverfa svo.
 

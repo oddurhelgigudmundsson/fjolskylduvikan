@@ -1,9 +1,10 @@
 import { createBackend } from './data.js';
 import { icon } from './icons.js';
 import { jokeOfTheDay } from './jokes.js';
+import { initStories, loadStories, storiesBar, bindStories } from './story.js';
 import { resolveFamily, chooseFamily, forgetFamily, familyCount } from './family.js';
 
-const APP_VERSION = 'fv-v26';
+const APP_VERSION = 'fv-v27';
 import {
   DAYS, DAYS_SHORT, MONTHS, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -31,6 +32,8 @@ const state = {
   choreLogs: [],                  // síðasta vika + þessi vika
   photos: [],
   reactions: [],
+  stories: [],                    // story: lifir í 24 klst
+  storyReactions: [],
   photoUrls: {},                  // slóð í geymslu → undirrituð slóð
   photoDays: 62,                  // hversu langt aftur myndir eru sóttar
   kudos: [],
@@ -81,11 +84,15 @@ async function startProfiles() {
 }
 
 async function startMain() {
+  initStories({
+    state, store, backend: state.backend, avatar, profileById, isParent, toast, openSheet, shrinkPhoto,
+    renderView: () => refreshIf(['home']),
+  });
   state.calFilter = store.get('fv.calfilter') || 'allir';
   renderShell();
   await Promise.all([loadItems(), loadMeals(), loadNotices(), loadReminders(), loadChores()]);
   renderView();
-  Promise.all([loadPhotos(), loadKudos(), loadWishes()]).then(() => refreshIf(['home', 'photos', 'kudos', 'wishes']));
+  Promise.all([loadPhotos(), loadKudos(), loadWishes(), loadStories()]).then(() => refreshIf(['home', 'photos', 'kudos', 'wishes']));
   loadEvents().then(() => refreshIf(['home', 'cal']));
   syncPush();
 
@@ -102,6 +109,8 @@ async function startMain() {
     state.backend.subscribe('photo_reactions', async () => { await loadPhotos(); refreshIf(['home', 'photos']); }),
     state.backend.subscribe('kudos', async () => { await loadKudos(); refreshIf(['home', 'kudos']); }),
     state.backend.subscribe('wishes', async () => { await loadWishes(); refreshIf(['wishes']); }),
+    state.backend.subscribe('stories', async () => { await loadStories(); refreshIf(['home']); }),
+    state.backend.subscribe('story_reactions', async () => { await loadStories(); }),
   ];
 }
 
@@ -113,7 +122,7 @@ setInterval(() => {
 // Síminn vaknar (app opnað aftur af heimaskjá) → sækja nýjustu gögn
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible' || !state.me) return;
-  await Promise.all([loadItems(), loadMeals(), reloadProfiles(), loadNotices(), loadReminders(), loadChores(), loadPhotos(), loadKudos(), loadWishes()]);
+  await Promise.all([loadItems(), loadMeals(), reloadProfiles(), loadNotices(), loadReminders(), loadChores(), loadPhotos(), loadKudos(), loadWishes(), loadStories()]);
   renderView();
   await loadEvents();
   refreshIf(['home', 'cal']);
@@ -492,6 +501,8 @@ function renderHome(view) {
       <h1>${greet}, ${esc(firstName(state.me.name))}</h1>
     </section>
 
+    ${storiesBar()}
+
     ${noticesCard()}
     ${pushPromptCard()}
     ${todayCard()}
@@ -527,6 +538,7 @@ function renderHome(view) {
   view.querySelector('#push-yes')?.addEventListener('click', enablePush);
   bindChoreButtons(view);
   bindSaman(view);
+  bindStories(view);
   view.querySelector('#joke-reveal')?.addEventListener('click', (e) => {
     e.currentTarget.closest('.joke-card').classList.add('revealed');
   });

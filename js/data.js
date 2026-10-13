@@ -96,6 +96,27 @@ async function supabaseBackend(family) {
       if (emoji) ok(await sb.from('photo_reactions').upsert({ photo_id, profile_id, emoji }, { onConflict: 'photo_id,profile_id' }));
       else ok(await sb.from('photo_reactions').delete().match({ photo_id, profile_id }));
     },
+    // ---- Story: myndir sem lifa í 24 klst ----
+    async listStories() {
+      return ok(await sb.from('stories').select('*').gt('expires_at', new Date().toISOString()).order('created_at'));
+    },
+    async listStoryReactions(ids) {
+      if (!ids.length) return [];
+      return ok(await sb.from('story_reactions').select('*').in('story_id', ids));
+    },
+    async addStory({ profile_id, blob }) {
+      const path = `story/${profile_id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`;
+      ok(await sb.storage.from('myndir').upload(path, blob, { contentType: 'image/jpeg', upsert: false }));
+      ok(await sb.from('stories').insert({ profile_id, path }));
+    },
+    async deleteStory(story) {
+      await sb.storage.from('myndir').remove([story.path]);
+      ok(await sb.from('stories').delete().eq('id', story.id));
+    },
+    async reactStory(story_id, profile_id, emoji) {
+      if (emoji) ok(await sb.from('story_reactions').upsert({ story_id, profile_id, emoji }, { onConflict: 'story_id,profile_id' }));
+      else ok(await sb.from('story_reactions').delete().match({ story_id, profile_id }));
+    },
     async listKudos(since) {
       return ok(await sb.from('kudos').select('*').gte('created_at', since).order('created_at', { ascending: false }).limit(100));
     },
@@ -254,6 +275,25 @@ function demoBackend() {
       d.reactions = (d.reactions || []).filter((r) => !(r.photo_id === photo_id && r.profile_id === profile_id));
       if (emoji) d.reactions.push({ photo_id, profile_id, emoji });
       commit('photo_reactions');
+    },
+    async listStories() {
+      const d = read(); const now = new Date().toISOString();
+      if (!d.stories) { d.stories = []; d.storyReactions = []; write(); }
+      return clone(d.stories.filter((x) => x.expires_at > now).sort((a, b) => a.created_at.localeCompare(b.created_at)));
+    },
+    async listStoryReactions(ids) { return clone((read().storyReactions || []).filter((r) => ids.includes(r.story_id))); },
+    async addStory({ profile_id, blob }) {
+      const path = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(blob); });
+      const now = Date.now();
+      (read().stories ||= []).push({ id: uid(), profile_id, path, created_at: new Date(now).toISOString(), expires_at: new Date(now + 864e5).toISOString() });
+      commit('stories');
+    },
+    async deleteStory(story) { read().stories = read().stories.filter((x) => x.id !== story.id); commit('stories'); },
+    async reactStory(story_id, profile_id, emoji) {
+      const d = read();
+      d.storyReactions = (d.storyReactions || []).filter((r) => !(r.story_id === story_id && r.profile_id === profile_id));
+      if (emoji) d.storyReactions.push({ story_id, profile_id, emoji });
+      commit('story_reactions');
     },
     async listKudos(since) {
       const d = read();
