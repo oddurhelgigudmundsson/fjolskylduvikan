@@ -13,17 +13,18 @@ Til að fá yfirlit: biddu Claude um „yfirlit yfir backlog“ og veldu númer.
 | 1 | Ertu í mat í kvöld? | Já / Nei / Seinn fyrir kl. 16, fjöldi í mat sést strax | Lítið | Daglega |
 | 2 | Uppáhalds á innkaupalistanum | Algengar vörur sem takkar, eitt ýt á listann | Lítið | Daglega |
 | 3 | Sunnudagsyfirlitið | Einn skjár fyrir fjölskyldufundinn: stig, bikar, næsta vika | Miðlungs | Vikulega |
-| 4 | Næst á dagskrá og leit | „Næst: Æfing eftir 45 mín“ á forsíðu, leit í dagatali | Lítið | Daglega |
-| 5 | Uppskriftabanki | Vistaðir réttir, „Sama og síðasta vika“ á matseðil | Miðlungs | Vikulega |
-| 6 | Hver skutlar? | „Ég tek það“ á viðburðum, áminning til bílstjórans | Miðlungs | Nokkrum sinnum í viku |
-| 7 | Beiðnir til foreldra | „Má ég …?“ → Já / Nei / Ræðum það | Miðlungs | Nokkrum sinnum í viku |
-| 8 | Staðan mín | Komin heim / Á æfingu / Hjá vini / Verð sein | Lítið | Daglega |
-| 9 | Virkar án nets | Innkaupalistinn virkar í búðinni þótt netið detti út | Miðlungs | Í hverri búðarferð |
-| 10 | Rákir og vikuyfirlit verka | 🔥 dagar í röð, yfirlit fyrir foreldra | Lítið | Daglega |
-| 11 | Árleg heimilisverk | Dekkjaskipti, reykskynjarar, gjöld; bara foreldrar | Lítið | Nokkrum sinnum á ári |
-| 12 | Upplýsingabók fjölskyldunnar | WiFi, símanúmer, afmæli, fatastærðir | Miðlungs | Stundum |
-| 13 | Eigið dagatal hvers og eins | Tengja Google / iCloud / Outlook dagatal | Lítið–miðlungs | Daglega, ef þörf er á |
-| 14 | Krónan | Innkaupalistinn í Snjallverslun Krónunnar | Miðlungs | Í hverri pöntun |
+| 4 | Story | Myndir sem lifa í 24 klst, eins og á Instagram | Miðlungs | Daglega |
+| 5 | Næst á dagskrá og leit | „Næst: Æfing eftir 45 mín“ á forsíðu, leit í dagatali | Lítið | Daglega |
+| 6 | Uppskriftabanki | Vistaðir réttir, „Sama og síðasta vika“ á matseðil | Miðlungs | Vikulega |
+| 7 | Hver skutlar? | „Ég tek það“ á viðburðum, áminning til bílstjórans | Miðlungs | Nokkrum sinnum í viku |
+| 8 | Beiðnir til foreldra | „Má ég …?“ → Já / Nei / Ræðum það | Miðlungs | Nokkrum sinnum í viku |
+| 9 | Staðan mín | Komin heim / Á æfingu / Hjá vini / Verð sein | Lítið | Daglega |
+| 10 | Virkar án nets | Innkaupalistinn virkar í búðinni þótt netið detti út | Miðlungs | Í hverri búðarferð |
+| 11 | Rákir og vikuyfirlit verka | 🔥 dagar í röð, yfirlit fyrir foreldra | Lítið | Daglega |
+| 12 | Árleg heimilisverk | Dekkjaskipti, reykskynjarar, gjöld; bara foreldrar | Lítið | Nokkrum sinnum á ári |
+| 13 | Upplýsingabók fjölskyldunnar | WiFi, símanúmer, afmæli, fatastærðir | Miðlungs | Stundum |
+| 14 | Eigið dagatal hvers og eins | Tengja Google / iCloud / Outlook dagatal | Lítið–miðlungs | Daglega, ef þörf er á |
+| 15 | Krónan | Innkaupalistinn í Snjallverslun Krónunnar | Miðlungs | Í hverri pöntun |
 
 ---
 
@@ -50,13 +51,40 @@ Til að fá yfirlit: biddu Claude um „yfirlit yfir backlog“ og veldu númer.
 - Næsta vika í dagatalinu, matseðill sem á eftir að skipuleggja, myndir vikunnar og hrós vikunnar.
 - Passar við bikarinn sem þið tilkynnið sjálf á sunnudögum.
 
-## 4. Næst á dagskrá og leit
+## 4. Story
+*Skoðað 13. okt. 2026 · Stærð: miðlungs (um dagur) · Allt ákveðið, tilbúið í útfærslu*
+
+**Hugmyndin:** Eins og story á Instagram, bara fyrir fjölskylduna. Myndir sem lifa í 24 klukkutíma og hverfa svo.
+
+**Ákveðið**
+- **Bara myndir**, ein eða fleiri í einu. Engin myndbönd, enginn texti ofan á.
+- **Nýjar eða gamlar myndir** úr myndasafninu. Gaman að setja inn gamla mynd sem er góð minning.
+- Myndirnar **lifa í 24 klst** og hverfa svo alveg.
+- **Engin tilkynning** á hópinn þegar einhver setur inn story.
+- **Viðbrögð með emoji** (❤️😂😍👏🔥), eins og á Mynd dagsins.
+- **Ekkert „séð af“:** sá sem setur inn sér ekki hverjir hafa skoðað.
+- **Mynd dagsins helst óbreytt og varanleg** (fer í Árið okkar). Story er sér og hverfur.
+
+**Hvernig það virkar**
+- Hringir með myndum fjölskyldunnar efst á forsíðunni. Litaður hringur = story sem þú hefur ekki séð (geymt í símanum, ekki sýnt öðrum).
+- Ýtt á hring: opnast á fullum skjá, með framvindustikum efst (ein fyrir hverja mynd).
+- Ýtt hægra megin = næsta mynd, vinstra megin = fyrri, haldið niðri = stoppa, strokið niður = loka.
+- Eftir síðustu mynd einnar manneskju fer story næsta í röðinni sjálfkrafa af stað.
+- **＋ Story** hjá eigin hring: taka mynd eða velja eina eða fleiri úr myndasafni.
+- Sá sem setur inn getur eytt sinni story fyrr.
+
+**Tæknin**
+- Byggir á sama grunni og Mynd dagsins: minnkun mynda, læst geymsla í Supabase, aðeins fjölskyldan sér.
+- Ný tafla `stories` (með `expires_at`) og `story_reactions`.
+- Klukkan sem keyrir áminningarnar (á 5 mín fresti) eyðir útrunnum myndum úr geymslunni, svo plássið fyllist ekki.
+
+## 5. Næst á dagskrá og leit
 *Skoðað 13. okt. 2026 · Stærð: lítið*
 
 - Efst í „Í dag“: **„Næst: Fótboltaæfing Pétur eftir 45 mín“** í stað þess að lesa allan listann.
 - Leit í dagatalinu: „hvenær er næsti tannlæknir?“ leitar fram í tímann.
 
-## 5. Uppskriftabanki
+## 6. Uppskriftabanki
 *Skoðað 13. okt. 2026 · Stærð: miðlungs*
 
 - Réttir sem eldaðir eru oft vistast með hráefnum (verður til sjálfkrafa úr matseðlinum).
@@ -64,7 +92,7 @@ Til að fá yfirlit: biddu Claude um „yfirlit yfir backlog“ og veldu númer.
 - Takki **„Sama og síðasta vika“** fyllir vikuna á einu ýti.
 - Passar vel við „Kokkur vikunnar“ ef þið viljið bæta því við seinna.
 
-## 6. Hver skutlar?
+## 7. Hver skutlar?
 *Skoðað 13. okt. 2026 · Stærð: miðlungs*
 
 - Viðburðir sem þarf að keyra á fá **„Hver skutlar?“**; foreldri ýtir á **„Ég tek það“**.
@@ -72,41 +100,41 @@ Til að fá yfirlit: biddu Claude um „yfirlit yfir backlog“ og veldu númer.
 - Hvaða viðburðir? T.d. þeir sem hafa staðsetningu, eða merki í titli. Ákveða fyrst.
 - Dagatalið er bara lesið úr Google, svo skutlið er geymt í appinu, ekki í Google.
 
-## 7. Beiðnir til foreldra
+## 8. Beiðnir til foreldra
 *Skoðað 13. okt. 2026 · Stærð: miðlungs*
 
 - Börnin senda beiðni: „Má ég gista hjá Söru?“, „Getur einhver sótt mig kl. 21?“, „Má ég fá pening fyrir bíó?“
 - Foreldrar fá tilkynningu og svara **Já / Nei / Ræðum það**; barnið fær svarið sem tilkynningu.
 - Allt á einum stað, ekki týnt í SMS-þráðum. Saga yfir síðustu beiðnir.
 
-## 8. Staðan mín
+## 9. Staðan mín
 *Skoðað 13. okt. 2026 · Stærð: lítið*
 
 - Einn takki fyrir krakkana: **Komin heim 🏠 / Á æfingu ⚽ / Hjá vini 👋 / Verð sein ⏰**.
 - Foreldrar sjá stöðuna á forsíðunni. Engin staðsetning eða eftirlit.
 - Staðan rennur út eftir nokkra klukkutíma svo gömul staða sitji ekki eftir.
 
-## 9. Virkar án nets
+## 10. Virkar án nets
 *Skoðað 13. okt. 2026 · Stærð: miðlungs*
 
 - Innkaupalistinn (og forsíðan) opnast án nets, úr síðasta afriti í símanum.
 - Hak og nýjar vörur vistast í símanum og samstillast þegar netið kemur.
 - Árekstrar: ef tveir haka við sama hlut gerist ekkert slæmt; ef vöru er eytt á meðan, vinnur eyðingin.
 
-## 10. Rákir og vikuyfirlit verka
+## 11. Rákir og vikuyfirlit verka
 *Skoðað 13. okt. 2026 · Stærð: lítið*
 
 - Rák á verkum dag eftir dag: „Búa um rúmið 🔥 12 dagar“. Rákin brotnar ef dagur dettur út.
 - Fyrir foreldra: yfirlit yfir vikuna, hver gerði hvað og hvaða verk gleymast oftast.
 - Börnin sjá bara sínar rákir, eins og með stigin.
 
-## 11. Árleg heimilisverk
+## 12. Árleg heimilisverk
 *Skoðað 13. okt. 2026 · Stærð: lítið*
 
 - Áminningar sem gerast einu sinni eða nokkrum sinnum á ári: nagladekk af 15. apríl, rafhlöður í reykskynjara, sía í háfnum, fasteignagjöld, æfingagjöld í byrjun annar.
 - Bara foreldrar sjá þetta. Byggir á áminningunum sem eru til, með „árlega“ eða „mánaðarlega“ endurtekningu.
 
-## 12. Upplýsingabók fjölskyldunnar
+## 13. Upplýsingabók fjölskyldunnar
 *Skoðað 13. okt. 2026 · Stærð: miðlungs*
 
 - WiFi-lykilorð (líka fyrir gesti), símanúmer (skólinn, heilsugæslan, ömmur og afar), skápakóðar.
@@ -114,7 +142,7 @@ Til að fá yfirlit: biddu Claude um „yfirlit yfir backlog“ og veldu númer.
 - Fatastærðir og skóstærðir krakkanna, sem passar við óskalistana.
 - Sumt er viðkvæmt: ákveða hvað börnin sjá.
 
-## 13. Eigið dagatal hvers og eins
+## 14. Eigið dagatal hvers og eins
 *Skoðað 13. okt. 2026 · Stærð: lítið–miðlungs*
 
 **Hugmyndin:** Hver og einn tengir sitt eigið dagatal (Google, iCloud, Outlook), og viðburðirnir þaðan birtast á honum í appinu, til viðbótar við Heimilið og Heimilið vol.2.
@@ -135,7 +163,7 @@ Til að fá yfirlit: biddu Claude um „yfirlit yfir backlog“ og veldu númer.
 
 **Áður en farið er af stað:** vantar eitthvað í dagatalið í dag? Eru krakkarnir eða við með dagatöl sem fara ekki í Heimilið?
 
-## 14. Krónan: innkaupalistinn í Krónuna
+## 15. Krónan: innkaupalistinn í Krónuna
 *Skoðað 13. okt. 2026 · Stærð: miðlungs*
 
 **Hugmyndin:** Foreldri ýtir á „Senda í Krónu“ og innkaupalistinn fer yfir í Snjallverslun Krónunnar.
