@@ -167,3 +167,27 @@ Hvorugt býður upp á opna tengingu sem önnur öpp geta notað, og Google-sta�
 - „Staðan mín“ (#9 á backlog) er góður fyrsti áfangi: handvirkt „Komin heim / Á æfingu“ sem síðar getur orðið sjálfvirkt.
 
 **Kostnaður:** kortaþjónusta (t.d. Mapbox eða Google Maps) kostar eftir notkun; geofence í símanum sjálfum kostar ekkert.
+
+---
+
+## 📅 Mörg dagatöl á hvern og einn (vinna, einkalíf, fyrirtæki)
+*Skráð 14. okt. 2026*
+
+**Hugmyndin:** hvert foreldri getur tengt mörg dagatöl: vinnu-Outlook, persónulegt dagatal og dagatöl fyrirtækja eða annars reksturs. Fjölskyldan sér þá hvenær foreldrar eru uppteknir, og skutl-planið hér að ofan getur nýtt það.
+
+**Athugið:** þetta snýst um dagatöl, ekki tölvupóst. Að lesa póst er í „Skólinn og íþróttafélögin beint inn“.
+
+**Staðan í dag**
+- Það virkar nú þegar að tengja mörg dagatöl: öll leyndarmál í Supabase sem byrja á `ICAL_` eru lesin.
+- En aðeins `ICAL_<nafn>` (t.d. `ICAL_ODDUR`) fer á viðkomandi. `ICAL_ODDUR_VINNA` færi á alla fjölskylduna, svo vinnufundir myndu birtast hjá krökkunum.
+
+**Það sem þarf að gera**
+1. **Rétt manneskja:** `ICAL_ODDUR_VINNA`, `ICAL_ODDUR_FYRIRTAEKI1` o.s.frv. fari öll á Odd (lítil breyting í clever-api).
+2. **„Upptekinn“ í stað titils:** viðburðir úr vinnu- og fyrirtækjadagatölum sýndir sem „Upptekinn“, og bara foreldrum. Börnin sjá ekki fundina.
+3. **Lit eða merki eftir dagatali**, t.d. 💼 fyrir vinnu, svo það sjáist hvaðan viðburðurinn kemur.
+
+**Hvernig slóðirnar fást**
+- **Outlook / Microsoft 365:** Outlook á vefnum → Stillingar → Dagatal → Samnýtt dagatöl → *Birta dagatal* → afrita ICS-slóðina. Hægt að velja „Aðeins hvenær ég er upptekinn“. Sumir vinnustaðir loka fyrir þetta.
+- **Google / Workspace:** stillingar dagatalsins → *Leynilegt heimilisfang á iCal-sniði*.
+
+**Tengist:** #14 „Eigið dagatal hvers og eins“ á backlog. Fyrir markað ætti þetta að verða „Skrá inn með Google / Microsoft“ í stað þess að líma slóðir inn í Supabase.
