@@ -124,5 +124,12 @@ Every family gets its **own Supabase project** (its own data, login and calendar
 
 The full step-by-step guide and the user guide for the test family are kept as Claude Docs.
 
+## Statistics (Tölfræði)
+Two read-only queries built on what the database already stores (nothing extra is tracked). Paste into each family's SQL Editor and Run:
+- `supabase/tolfraedi-vikur.sql`: one row per week for the last 12 weeks: active people (parents/kids), active days, chores, shopping, photos, kudos, reminders, messages.
+- `supabase/tolfraedi-folk.sql`: one row per person for the last 28 days: PIN chosen, notifications on, active days, actions per area, points, last active.
+
+Limits: cleared shopping items and expired stories are gone, and app opens are not recorded, so these count *activity*, not visits.
+
 ## Backlog
 Ideas that have been looked at but not built are in [BACKLOG.md](BACKLOG.md), ranked by priority with an overview table at the top. Loose, unsorted ideas live in [HUGMYNDIR.md](HUGMYNDIR.md). Bigger ideas that need the app to grow first (full Krónan checkout, inviting grandparents as guests) are in [FRAMTID.md](FRAMTID.md).
