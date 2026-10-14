@@ -5,7 +5,7 @@ import { initStories, loadStories, storiesBar, bindStories } from './story.js';
 import { initBook, loadBook, renderBook, birthdayHomeCard, sizesLine } from './book.js';
 import { resolveFamily, chooseFamily, forgetFamily, familyCount } from './family.js';
 
-const APP_VERSION = 'fv-v35';
+const APP_VERSION = 'fv-v36';
 import {
   DAYS, DAYS_SHORT, MONTHS, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -597,11 +597,15 @@ function untilText(ms) {
   const h = Math.floor(min / 60), m = min % 60;
   return h < 3 ? `eftir ${h} klst.${m ? ` ${m} mín` : ''}` : '';
 }
-function nextUp(today, now = new Date()) {
+function pickNext(today, now = new Date()) {
   const timed = today.filter((e) => !e.allDay);
-  const running = timed.find((e) => new Date(e.start) <= now && new Date(e.end) > now);
-  const next = running || timed.find((e) => new Date(e.start) > now);
+  return timed.find((e) => new Date(e.start) <= now && new Date(e.end) > now)
+    || timed.find((e) => new Date(e.start) > now) || null;
+}
+function nextUp(today, now = new Date()) {
+  const next = pickNext(today, now);
   if (!next) return '';
+  const running = new Date(next.start) <= now;
   const main = profileById(next.people[0]);
   const color = next.people.includes('allir') || !main ? 'var(--accent)' : main.color;
   const when = running ? `til kl. ${hhmm(next.end)}` : (untilText(new Date(next.start) - now) || `kl. ${hhmm(next.start)}`);
@@ -626,8 +630,13 @@ function todayCard() {
   else if (!today.length) body = mine.length
     ? '<p class="muted">Allt búið í dag</p>'
     : '<p class="muted">Ekkert á dagskrá í dag</p>';
-  else body = `${nextUp(today, now)}<ul class="events compact">${today.slice(0, 6).map(eventRow).join('')}</ul>
-    ${today.length > 6 ? `<p class="muted small">+${today.length - 6} í viðbót</p>` : ''}`;
+  else {
+    // Viðburðurinn í „Næst/Núna“ er ekki endurtekinn í listanum fyrir neðan
+    const top = pickNext(today, now);
+    const rest = today.filter((e) => e !== top);
+    body = `${nextUp(today, now)}${rest.length ? `<ul class="events compact">${rest.slice(0, 6).map(eventRow).join('')}</ul>` : ''}
+    ${rest.length > 6 ? `<p class="muted small">+${rest.length - 6} í viðbót</p>` : ''}`;
+  }
   return `
     <section class="card">
       <div class="card-head">
