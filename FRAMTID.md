@@ -44,3 +44,65 @@ Stærri hugmyndir sem eiga heima í appinu **þegar það er komið lengra**: fl
 - Eigin innskráning fyrir hvern og einn, ekki einn sameiginlegur aðgangur eins og í dag. Það er sama endursmíði og þarf fyrir markaðinn (sjá viðskiptaáætlunina: „Margar fjölskyldur í sama kerfi“).
 - Hlutverkið **gestur** við hliðina á foreldri og barni, með öryggisreglum í gagnagrunninum sem takmarka hvað gestur sér.
 - „Hver skutlar?“ (#7 á backlog) passar beint við þetta: amma getur tekið skutlið.
+
+---
+
+## 📨 Skólinn og íþróttafélögin beint inn
+*Skráð 14. okt. 2026*
+
+**Hugmyndin:** póstur frá Mentor, Sportabler/Abler, þjálfurum og foreldrafélögum er lesinn sjálfkrafa og verður að viðburði eða áminningu í appinu. Í dag les annað foreldrið allt þetta og ber það í höfðinu.
+
+**Dæmi**
+- „Bleikur dagur á föstudaginn“ → áminning á barnið kvöldið áður.
+- „Mæting kl. 8:30 á laugardag í Egilshöll“ → viðburður í dagatalinu, merktur réttu barni.
+- „Muna 2.000 kr. fyrir vettvangsferð fyrir miðvikudag“ → áminning á foreldri.
+
+**Hvernig það gæti virkað**
+- Fjölskyldan fær sitt eigið netfang í appinu (t.d. `prufa1@inn.fjolskylduvikan.is`) og áframsendir á það, eða setur upp sjálfvirka áframsendingu frá skólanum.
+- Gervigreind les póstinn, finnur dagsetningar, tíma, staði og hvaða barn á í hlut, og stingur upp á viðburði eða áminningu.
+- **Foreldri samþykkir** áður en nokkuð fer inn („3 nýjar tillögur úr skólapóstinum“), svo ekkert vitlaust lendi í dagatalinu.
+
+**Það sem þarf að skoða**
+- Hvort Mentor og Sportabler/Abler bjóða upp á API eða dagatalsslóð (iCal), sem væri einfaldara og öruggara en að lesa póst.
+- Persónuvernd: póstur um börn er viðkvæmur. Aðeins það sem þarf er geymt, og pósturinn sjálfur er ekki geymdur.
+- Kostnaður við gervigreind á hvern póst.
+
+---
+
+## 📸 Mynd af blaði eða skjámynd → viðburðir
+*Skráð 14. okt. 2026*
+
+**Hugmyndin:** taka mynd af æfingatöflu, boðskorti í afmæli, skólapósti eða skjámynd úr Messenger, og appið breytir henni í viðburði og áminningar.
+
+**Dæmi**
+- Æfingatafla vetrarins → allar æfingar sem endurteknir viðburðir á réttu barni.
+- Boðskort: „Afmæli Kötlu laugardaginn 25. okt kl. 14–16, Fjólugötu 3“ → viðburður + áminning um að kaupa gjöf.
+- Skjámynd af skilaboðum úr foreldrahópnum → viðburður.
+
+**Hvernig það gæti virkað**
+- Takki „Úr mynd“ í dagatalinu og áminningunum. Gervigreind les myndina og sýnir tillögur sem foreldri lagar og samþykkir.
+- Sama vél og „Skólinn beint inn“, bara önnur leið inn. Gott að byggja þær saman.
+
+**Athugið:** dagatalið er í dag bara lesið úr Google. Til að appið geti búið til viðburði þarf annaðhvort að skrifa þá inn í Google-dagatalið (heimild til að skrifa) eða geyma þá í appinu sjálfu.
+
+---
+
+## 🏠 Tvö heimili
+*Skráð 14. okt. 2026*
+
+**Hugmyndin:** fyrir foreldra sem búa ekki saman. Barnið er með eitt app óháð því hvar það er, og hvort heimili sér það sem því tengist.
+
+**Það sem það gerir**
+- **Umgengnisdagatal:** „Hjá mömmu þessa viku, hjá pabba næstu“, viku-á-viku eða önnur skipting. Breytingar („getum við skipt helginni?“) eru beðnar um og samþykktar í appinu.
+- **Hvar er dótið?** Íþróttataskan, spjaldtölvan, lyfin. Hægt að merkja hvað fer á milli heimila við skiptin.
+- **Sameiginleg útgjöld:** tómstundir, föt og tannlæknir, hver borgaði og hvað skiptist. Engar millifærslur í appinu, bara yfirlit.
+- **Upplýsingar sem báðir þurfa:** stærðir, læknir, skóli. Samnýtt úr Upplýsingabókinni.
+
+**Hvernig það gæti virkað**
+- Barnið tilheyrir tveimur heimilum. Hvort heimili er eins og fjölskylda í dag, með sín eigin verk, innkaupalista og matseðil. Bara barnið og það sem það varðar er samnýtt.
+- Hvort heimili ákveður hvað hinu er sýnt. Ekkert annað er deilt á milli.
+- Á heimaskjá barnsins stendur hvar það er í dag og hvar það verður næst.
+
+**Af hverju þetta er áhugavert**
+- Stór hópur fjölskyldna, og fá fjölskylduöpp sinna þessu vel. Sterkur sölupunktur ef appið fer á markað.
+- Krefst sömu endursmíði og annað hér: eigin innskráning hvers og eins og fólk sem tilheyrir fleiri en einni fjölskyldu (eins og ömmur og afar í gestahugmyndinni).
