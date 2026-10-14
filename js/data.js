@@ -507,6 +507,16 @@ function demoChoreLog(chores) {
       });
     }
   }
+  // Rákir: Alma hefur búið um rúmið 12 daga í röð, Thelma dregið frá 4 daga í röð
+  const streak = (kid, ch, n) => {
+    for (let back = 1; back <= n; back++) {
+      const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() - back);
+      if (!out.some((l) => l.chore_id === ch.id && l.profile_id === kid && l.day === dayIso(d)))
+        out.push({ id: uid(), chore_id: ch.id, profile_id: kid, day: dayIso(d), status: 'approved', points: ch.points, approved_by: 'oddur' });
+    }
+  };
+  streak('alma', chores[0], 12);
+  streak('thelma', chores[1], 4);
   const today = dayIso(new Date());
   out.push({ id: uid(), chore_id: chores[0].id, profile_id: 'alma', day: today, status: 'approved', points: 5, approved_by: null });
   out.push({ id: uid(), chore_id: chores[4].id, profile_id: 'thelma', day: today, status: 'pending', points: 10, approved_by: null });

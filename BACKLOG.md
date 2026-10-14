@@ -20,7 +20,7 @@ Til að fá yfirlit: biddu Claude um „yfirlit yfir backlog“ og veldu númer.
 | 8 | Beiðnir til foreldra | „Má ég …?“ → Já / Nei / Ræðum það | Miðlungs | Nokkrum sinnum í viku |
 | 9 | Staðan mín | Komin heim / Á æfingu / Hjá vini / Verð sein | Lítið | Daglega |
 | 10 | Virkar án nets | Innkaupalistinn virkar í búðinni þótt netið detti út | Miðlungs | Í hverri búðarferð |
-| 11 | Rákir og vikuyfirlit verka | 🔥 dagar í röð, yfirlit fyrir foreldra | Lítið | Daglega |
+| 11 | ~~Rákir og vikuyfirlit verka~~ ✅ | **Komið 14. okt. 2026** | Lítið | Daglega |
 | 12 | Árleg heimilisverk | Dekkjaskipti, reykskynjarar, gjöld; bara foreldrar | Lítið | Nokkrum sinnum á ári |
 | 13 | ~~Upplýsingabók fjölskyldunnar~~ ✅ | **Komið 13. okt. 2026** | Miðlungs | Stundum |
 | 14 | Eigið dagatal hvers og eins | Tengja Google / iCloud / Outlook dagatal | Lítið–miðlungs | Daglega, ef þörf er á |
@@ -121,8 +121,16 @@ Til að fá yfirlit: biddu Claude um „yfirlit yfir backlog“ og veldu númer.
 - Hak og nýjar vörur vistast í símanum og samstillast þegar netið kemur.
 - Árekstrar: ef tveir haka við sama hlut gerist ekkert slæmt; ef vöru er eytt á meðan, vinnur eyðingin.
 
-## 11. Rákir og vikuyfirlit verka
-*Skoðað 13. okt. 2026 · Stærð: lítið*
+## 11. Rákir og vikuyfirlit verka ✅
+*Skoðað 13. okt. 2026 · Stærð: lítið · **Komið 14. okt. 2026***
+
+**Eins og það var smíðað**
+- 🔥 tala við hvert verk þegar rákin er 2 eða meira. Dagar sem verkið er ekki á dagskrá eru hoppaðir yfir, og dagurinn í dag brýtur ekki rákina fyrr en hann er liðinn.
+- „Hver sem er“-verk fá ekki rák, því þar keppa börnin um verkið.
+- Foreldrar fá spjaldið „Síðustu 7 dagar“ undir Verk: hvert barn með „X af Y verkum“, lengstu rák og „Gleymist oftast“ (3 efstu, með nöfnum).
+- Engin ný tafla í gagnagrunninum. Reiknað úr verkaskránni (90 dagar aftur í tímann).
+
+**Upprunaleg hugmynd**
 
 - Rák á verkum dag eftir dag: „Búa um rúmið 🔥 12 dagar“. Rákin brotnar ef dagur dettur út.
 - Fyrir foreldra: yfirlit yfir vikuna, hver gerði hvað og hvaða verk gleymast oftast.

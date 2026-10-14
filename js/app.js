@@ -5,7 +5,7 @@ import { initStories, loadStories, storiesBar, bindStories } from './story.js';
 import { initBook, loadBook, renderBook, birthdayHomeCard, sizesLine } from './book.js';
 import { resolveFamily, chooseFamily, forgetFamily, familyCount } from './family.js';
 
-const APP_VERSION = 'fv-v31';
+const APP_VERSION = 'fv-v34';
 import {
   DAYS, DAYS_SHORT, MONTHS, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -1490,8 +1490,10 @@ const kids = () => state.profiles.filter((p) => p.role === 'child');
 const mondayIso = (d = new Date()) => iso(startOfWeek(d));
 const weekDays = (monIso) => [0, 1, 2, 3, 4, 5, 6].map((n) => iso(addDays(fromIso(monIso), n)));
 
+const STREAK_DAYS = 90;   // hversu langt aftur rákir eru reiknaðar
+
 async function loadChores() {
-  const lastMon = iso(addDays(startOfWeek(new Date()), -7));
+  const lastMon = iso(addDays(new Date(), -STREAK_DAYS));
   const sun = iso(addDays(startOfWeek(new Date()), 6));
   try {
     const [chores, logs] = await Promise.all([state.backend.listChores(), state.backend.listChoreLogs(lastMon, sun)]);
@@ -1505,6 +1507,83 @@ const choreFor = (c, kidId) => !(c.to_ids || []).length || c.to_ids.includes(kid
 const choresToday = (kidId, day = todayIso()) => state.chores.filter((c) => choreOn(c, day) && choreFor(c, kidId));
 const logOf = (c, kidId, day = todayIso()) => state.choreLogs.find((l) => l.chore_id === c.id && l.day === day && l.profile_id === kidId);
 const takenBy = (c, day = todayIso()) => (c.mode === 'anyone' ? state.choreLogs.find((l) => l.chore_id === c.id && l.day === day) : null);
+
+// 🔥 Rák: hversu oft í röð barnið hefur klárað verkið á þeim dögum sem það er á dagskrá.
+// Dagar sem verkið er ekki á dagskrá eru hoppaðir yfir. Dagurinn í dag brýtur ekki rákina
+// fyrr en hann er liðinn. „Hver sem er“-verk fá ekki rák, því þar keppa börnin um verkið.
+function streakOf(c, kidId) {
+  if (c.mode === 'anyone' || !choreFor(c, kidId)) return 0;
+  const today = todayIso();
+  let n = 0;
+  for (let back = 0; back < STREAK_DAYS; back++) {
+    const day = iso(addDays(new Date(), -back));
+    if (!choreOn(c, day)) continue;
+    if (logOf(c, kidId, day)) n++;
+    else if (day !== today) break;
+  }
+  return n;
+}
+const streakUnit = (c, n) => ((c.repeat_days || []).length === 7 ? (n === 1 ? 'dagur' : 'dagar') : 'skipti');
+const streakBadge = (c, kidId) => {
+  const n = streakOf(c, kidId);
+  return n >= 2 ? `<span class="streak" title="${n} ${streakUnit(c, n)} í röð">🔥 ${n}</span>` : '';
+};
+
+// Síðustu 7 heilu dagar (í dag ekki talinn með, hann er ekki búinn)
+function choreWeekReview() {
+  const days = [7, 6, 5, 4, 3, 2, 1].map((n) => iso(addDays(new Date(), -n)));
+  const perKid = kids().map((k) => {
+    let due = 0, done = 0;
+    for (const day of days) for (const c of state.chores) {
+      if (!choreOn(c, day) || !choreFor(c, k.id)) continue;
+      if (c.mode === 'anyone') { if (logOf(c, k.id, day)) { done++; due++; } continue; }
+      due++; if (logOf(c, k.id, day)) done++;
+    }
+    const best = state.chores.map((c) => ({ c, n: streakOf(c, k.id) })).sort((a, b) => b.n - a.n)[0];
+    return { k, due, done, best: best && best.n >= 2 ? best : null };
+  });
+  const missed = state.chores.map((c) => {
+    const who = {};
+    let total = 0;
+    for (const day of days) {
+      if (!choreOn(c, day)) continue;
+      if (c.mode === 'anyone') { if (!takenBy(c, day)) { total++; } continue; }
+      for (const k of kids()) if (choreFor(c, k.id) && !logOf(c, k.id, day)) { total++; who[k.id] = (who[k.id] || 0) + 1; }
+    }
+    return { c, total, who };
+  }).filter((m) => m.total > 0).sort((a, b) => b.total - a.total).slice(0, 3);
+  return { days, perKid, missed };
+}
+
+function weekReviewCard() {
+  if (!state.chores.length || !kids().length) return '';
+  const { days, perKid, missed } = choreWeekReview();
+  const range = weekRange(fromIso(days[0]));
+  const pct = (r) => (r.due ? Math.round((100 * r.done) / r.due) : 0);
+  return `
+    <section class="card week-review">
+      <div class="card-head">
+        <div class="card-label">${icon('calendar-days')} Síðustu 7 dagar</div>
+        <span class="muted small">${esc(range)}</span>
+      </div>
+      <ul class="review-kids">${perKid.map((r) => `
+        <li>${avatar(r.k, 'sm')}
+          <div class="review-main">
+            <div class="review-top"><span class="kid-name">${esc(firstName(r.k.name))}</span>
+              <span class="muted small">${r.done} af ${r.due} verkum</span></div>
+            <div class="review-bar"><span style="width:${pct(r)}%"></span></div>
+            ${r.best ? `<span class="muted small">Lengsta rák: ${esc(r.best.c.emoji)} ${esc(r.best.c.title)} 🔥 ${r.best.n}</span>` : ''}
+          </div></li>`).join('')}</ul>
+      ${missed.length ? `
+        <div class="card-label review-sub">Gleymist oftast</div>
+        <ul class="review-missed">${missed.map((m) => {
+          const names = Object.entries(m.who).sort((a, b) => b[1] - a[1])
+            .map(([id, n]) => `${firstName(profileById(id)?.name || '')} ${n}`).join(', ');
+          return `<li><span>${esc(m.c.emoji)} ${esc(m.c.title)}</span>
+            <span class="muted small">${m.total} ${m.total === 1 ? 'sinni' : 'sinnum'}${names ? ' · ' + esc(names) : ''}</span></li>`;
+        }).join('')}</ul>` : '<p class="muted small">Ekkert verk gleymdist. Vel gert!</p>'}
+    </section>`;
+}
 
 function weekTotals(monIso) {
   const days = new Set(weekDays(monIso));
@@ -1551,6 +1630,7 @@ function choreRow(c, kidId, { compact = false } = {}) {
         aria-label="${esc(c.title)}${log ? ' — búið' : ''}">
         <span class="chore-emoji">${esc(c.emoji)}</span>
         <span class="chore-title">${esc(c.title)}${!compact && c.mode === 'anyone' && !log && !other ? '<span class="muted small"> · fyrstur fær</span>' : ''}</span>
+        ${streakBadge(c, kidId)}
         ${right}
       </button>
     </li>`;
@@ -1732,6 +1812,7 @@ function renderChores(view) {
         <ul class="kid-today">${today}</ul>
         <p class="muted small">Grænt = búið · gult = bíður samþykkis · grátt = ekki búið</p>
       </section>
+      ${weekReviewCard()}
       <button class="btn big" id="manage-chores">${icon('settings')} Sýsla með verkin</button>`;
   }
 

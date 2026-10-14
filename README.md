@@ -96,6 +96,9 @@ Round avatars at the top of the home screen. Anyone can post one or more photos 
 - Photos are shrunk to 1440px and kept in the same locked `myndir` bucket under `story/`. The 5-minute clock in `clever-api` deletes expired photos from storage, so space doesn't fill up.
 - Code: `js/story.js`. Database: run `supabase/8-story.sql` once, and redeploy `clever-api` so expired photos get cleaned up.
 
+## Streaks and weekly chore review
+Each chore a child has done several scheduled times in a row shows 🔥 and the count (kids see only their own). Parents get a **Síðustu 7 dagar** card under Verk: per child "X af Y verkum", their longest streak, and the three chores forgotten most often. Computed in `js/app.js` (`streakOf`, `weekReviewCard`) from `chore_log`; no SQL needed.
+
 ## Upplýsingabók (family info book)
 Opened from the menu when you tap your own avatar at the top → **Upplýsingabók**. Code: `js/book.js`. Database: run `supabase/9-upplysingabok.sql` once.
 

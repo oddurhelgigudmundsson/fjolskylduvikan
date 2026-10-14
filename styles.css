@@ -360,6 +360,18 @@ main { padding: 4px 16px calc(env(safe-area-inset-bottom) + 96px); display: flex
 .mini-chore.ok { background: color-mix(in srgb, var(--good) 22%, var(--card)); filter: none; opacity: 1; }
 .mini-chore.wait { background: #FEF3C7; filter: none; opacity: 1; }
 .mini-chore.other { opacity: .3; }
+.streak { flex: none; font-size: 13px; font-weight: 700; padding: 3px 8px; border-radius: 4px; background: var(--c-orange, #FDEBD8); color: var(--c-orange-t, #9A4A0E); white-space: nowrap; }
+.week-review .review-kids { list-style: none; margin: 4px 0 6px; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.week-review .review-kids li { display: flex; align-items: flex-start; gap: 10px; }
+.review-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.review-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.review-bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.review-bar span { display: block; height: 100%; background: var(--good); border-radius: 3px; }
+.review-sub { margin-top: 10px; }
+.review-missed { list-style: none; margin: 4px 0 0; padding: 0; }
+.review-missed li { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; }
+.review-missed li + li { border-top: 1px solid var(--line); }
+.review-missed li > span:first-child { font-weight: 600; }
 #manage-chores { width: 100%; }
 
 .emoji-title { display: flex; gap: 10px; }
