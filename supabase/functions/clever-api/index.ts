@@ -95,8 +95,10 @@ Deno.serve(async (req) => {
   // Tölfræðisíðan (tolfraedi.html): nafnlausar heildartölur, varðar með ADMIN_KEY
   const adminKey = req.headers.get('x-admin-key');
   if (adminKey !== null) {
-    const expected = Deno.env.get('ADMIN_KEY') || '';
-    if (expected.length < 16 || adminKey !== expected) return json({ error: 'forbidden' }, 403);
+    const expected = (Deno.env.get('ADMIN_KEY') || '').trim();
+    if (!expected) return json({ error: 'forbidden', reason: 'not_set' }, 403);
+    if (expected.length < 12) return json({ error: 'forbidden', reason: 'too_short' }, 403);
+    if (adminKey.trim() !== expected) return json({ error: 'forbidden', reason: 'mismatch' }, 403);
     try { return json(await familyStats()); }
     catch (e) { console.error(e); return json({ error: 'server_error', detail: String(e?.message || e) }, 500); }
   }

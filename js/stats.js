@@ -38,7 +38,7 @@ function renderGate(msg = '') {
     </section>`;
   app.querySelector('#gate').addEventListener('submit', (e) => {
     e.preventDefault();
-    const k = new FormData(e.target).get('key').trim();
+    const k = String(new FormData(e.target).get('key')).trim().replace(/^["']|["']$/g, '');
     set(KEY, k);
     load(k);
   });
@@ -51,7 +51,15 @@ async function fetchFamily(f, key) {
       headers: { 'Content-Type': 'application/json', 'x-admin-key': key, apikey: f.key },
       body: JSON.stringify({ action: 'stats' }),
     });
-    if (res.status === 403) return { ...f, problem: 'ADMIN_KEY vantar eða er rangur í þessu Supabase-verkefni (Edge Functions → Secrets).', forbidden: true };
+    if (res.status === 403) {
+      const reason = (await res.json().catch(() => ({}))).reason;
+      const problem = {
+        not_set: 'ADMIN_KEY er ekki til í þessu verkefni. Bættu því við: Edge Functions → Secrets → Name: ADMIN_KEY.',
+        too_short: 'ADMIN_KEY í þessu verkefni er of stuttur. Hann þarf að vera a.m.k. 12 stafir.',
+        mismatch: 'Lykillinn sem þú slóst inn er ekki sá sami og ADMIN_KEY í þessu verkefni.',
+      }[reason] || 'Aðgangi hafnað. Er nýjasti clever-api kóðinn kominn inn (Deploy)?';
+      return { ...f, problem, forbidden: reason === 'mismatch' };
+    }
     if (res.status === 404) return { ...f, problem: `Fallið „${f.fn || 'clever-api'}“ fannst ekki í þessu verkefni.` };
     if (res.status === 401) return { ...f, problem: 'Þjónninn er af eldri gerð. Límdu nýja clever-api kóðann inn og Deploy.' };
     if (!res.ok) return { ...f, problem: `Villa frá þjóninum (${res.status}).` };
@@ -59,7 +67,8 @@ async function fetchFamily(f, key) {
     if (!Array.isArray(data.weeks)) return { ...f, problem: 'Þjónninn er af eldri gerð. Límdu nýja clever-api kóðann inn og Deploy.' };
     return { ...f, data };
   } catch {
-    return { ...f, problem: 'Náði ekki sambandi (net, eða verkefnið í dvala).' };
+    // Gamall þjónn hafnar x-admin-key í CORS-forathugun, svo vafrinn fær enga svörun
+    return { ...f, problem: 'Fékk ekkert svar. Líklegast er gamli clever-api kóðinn enn inni: límdu nýja kóðann inn og ýttu á Deploy. (Eða verkefnið er í dvala.)' };
   }
 }
 
