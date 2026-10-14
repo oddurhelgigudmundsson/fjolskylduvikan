@@ -131,3 +131,39 @@ Stærri hugmyndir sem eiga heima í appinu **þegar það er komið lengra**: fl
 - Kortaþjónusta fyrir ferðatíma, t.d. Google Maps. Hún kostar eftir notkun.
 
 **Stóra myndin:** þetta er sú vinna í „3. vaktinni“ sem enginn sér en tekur mest. Samræmingin, ekki aksturinn sjálfur.
+
+---
+
+## 📍 Hvar er fjölskyldan? (staðsetning)
+*Skráð 14. okt. 2026*
+
+**Hugmyndin:** eins og Life360 eða Find My, en innbyggt í Fjölskylduvikuna og tengt dagskránni. Í stað þess að sýna bara punkta á korti segir appið það sem skiptir máli: **„Alma er komin á æfingu“**, **„Pétur lagði af stað heim úr skólanum“**, **„Kristín er 10 mín frá Egilshöll“**.
+
+**Það sem það gerir**
+- **Kort fjölskyldunnar:** hver og einn sem deilir sést á korti, með sínum lit og avatar.
+- **Staðir:** heima, skólinn, íþróttahúsin, amma. Tilkynning þegar barn kemur á stað eða fer þaðan („Thelma komin heim 15:42“).
+- **Tengt dagatalinu:** appið veit að Pétur á að vera í fótbolta kl. 17. Ef hann er ekki kominn kl. 17:10 fá foreldrar spurningu, ekki viðvörun.
+- **Skutl:** sá sem sækir sér hvar barnið er, og barnið sér „Pabbi er 5 mín í burtu“. Passar við „Hver skutlar?“ (#7) og skutl-planið hér að ofan.
+- **„Ég er komin“ með einu ýti** fyrir þau sem vilja ekki deila staðsetningu sjálfkrafa.
+
+**Hvernig það yrði sett upp**
+1. **Native app þarf fyrst.** Vefapp (eins og Fjölskylduvikan er í dag) fær aðeins staðsetningu meðan appið er opið á skjánum. Til að fylgjast með í bakgrunni þarf appið að vera í App Store / Google Play (sama umslag og nefnt er í viðskiptaáætluninni) með leyfi fyrir staðsetningu „alltaf“.
+2. **Staðir (geofences)** frekar en stöðug rakning. Síminn lætur vita þegar komið er inn á eða út af stað. Sparar rafhlöðu og er minna ágengt.
+3. **Gögnin:** síðasta staðsetning hvers og eins geymd í Supabase, aðeins sýnileg fjölskyldunni. Ferðasaga geymd stutt (t.d. 24 klst.) eða alls ekki.
+4. **Tilkynningar** í gegnum sömu push-tilkynningar og appið notar í dag.
+
+**Af hverju ekki bara tengjast Life360 eða Find My?**
+Hvorugt býður upp á opna tengingu sem önnur öpp geta notað, og Google-staðsetningardeiling ekki heldur. Það þyrfti því að smíða þetta sjálf.
+
+**Persónuvernd og traust (mikilvægast)**
+- Staðsetning barna er með viðkvæmustu gögnum sem til eru. Þarf skýrt samþykki, hýsingu innan EES og lögfræðiyfirferð.
+- **Allir sjá hverjir sjá sig.** Engin leynileg rakning. Á skjá barnsins stendur alltaf „Mamma og pabbi sjá hvar þú ert“.
+- **Unglingar (t.d. 15+) geta gert hlé** í ákveðinn tíma og foreldrar sjá að það er í hléi. Life360 hefur fengið mikla gagnrýni frá unglingum; traust skiptir meira en nákvæmni.
+- Foreldrar deila líka sinni staðsetningu. Þetta er fjölskylduapp, ekki eftirlitsapp.
+
+**Það sem þarf að vera til staðar fyrst**
+- Native app (App Store / Google Play).
+- Eigin innskráning hvers og eins (sama endursmíði og annað hér).
+- „Staðan mín“ (#9 á backlog) er góður fyrsti áfangi: handvirkt „Komin heim / Á æfingu“ sem síðar getur orðið sjálfvirkt.
+
+**Kostnaður:** kortaþjónusta (t.d. Mapbox eða Google Maps) kostar eftir notkun; geofence í símanum sjálfum kostar ekkert.
