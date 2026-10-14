@@ -9,7 +9,10 @@
 // 5) Saman: sá sem fær hrós fær tilkynningu, og kl. 18 fá allir áminningu ef
 //    engin mynd dagsins er komin. Útrunnum story-myndum (24 klst) er eytt.
 //
-// Leyndarmál (Supabase → Edge Functions → Secrets): eitt fyrir hvert dagatal.
+// Leyndarmál (Supabase → Edge Functions → Secrets):
+//   ADMIN_KEY        – lykill tölfræðisíðunnar (tolfraedi.html), sami í öllum verkefnum.
+//                      Ef hann vantar svarar fallið aldrei tölfræðibeiðnum.
+// Eitt fyrir hvert dagatal:
 //   ICAL_<eitthvað>  – leynileg iCal-slóð dagatals (Google, iCloud, Outlook…)
 //   Ef <eitthvað> er auðkenni prófíls (t.d. ICAL_ODDUR → 'oddur') eiga viðburðir án
 //   nafns í titli þá manneskju; annars alla fjölskylduna (t.d. ICAL_FJOLSKYLDA).
@@ -63,7 +66,7 @@ export function namesFor(profile) {
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-key',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
@@ -87,6 +90,15 @@ Deno.serve(async (req) => {
       console.error(e);
       return json({ error: 'server_error', detail: String(e?.message || e) }, 500);
     }
+  }
+
+  // Tölfræðisíðan (tolfraedi.html): nafnlausar heildartölur, varðar með ADMIN_KEY
+  const adminKey = req.headers.get('x-admin-key');
+  if (adminKey !== null) {
+    const expected = Deno.env.get('ADMIN_KEY') || '';
+    if (expected.length < 16 || adminKey !== expected) return json({ error: 'forbidden' }, 403);
+    try { return json(await familyStats()); }
+    catch (e) { console.error(e); return json({ error: 'server_error', detail: String(e?.message || e) }, 500); }
   }
 
   // Aðeins innskráður fjölskylduaðgangur kemst að
@@ -327,6 +339,92 @@ async function cleanupStories() {
   await db.storage.from('myndir').remove(data.map((s) => s.path));
   await db.from('stories').delete().in('id', data.map((s) => s.id));
   return { removed: data.length };
+}
+
+// ------------------------------------------------------------------
+// Tölfræði: hvað hefur verið gert í appinu, vika fyrir viku (síðustu 12 vikur).
+// Engin nöfn eða innihald fara út, bara fjöldi og hlutverk (foreldri/barn).
+// ------------------------------------------------------------------
+async function familyStats() {
+  const db = admin();
+  const WEEKS = 12;
+  const monday = (d) => { const x = new Date(d); x.setUTCHours(0, 0, 0, 0); x.setUTCDate(x.getUTCDate() - ((x.getUTCDay() + 6) % 7)); return x; };
+  const thisWeek = monday(new Date());
+  const since = new Date(thisWeek.getTime() - (WEEKS - 1) * 7 * 86400000);
+  const sinceIso = since.toISOString();
+
+  const { data: profiles } = await db.from('profiles').select('id, role, sort, pin_hash').order('sort');
+  const role = Object.fromEntries((profiles || []).map((p) => [p.id, p.role]));
+  const { data: subs } = await db.from('push_subscriptions').select('profile_id');
+  const pushOn = new Set((subs || []).map((x) => x.profile_id));
+
+  // Hver aðgerð: [hver, hvenær, hvað]. Tafla sem vantar (eldri uppsetning) er bara sleppt.
+  const acts = [];
+  const pull = async (table, cols, who, when, kind, filter) => {
+    let q = db.from(table).select(cols).gte(when, sinceIso).limit(20000);
+    if (filter) q = filter(q);
+    const { data, error } = await q;
+    if (error) return;
+    for (const r of data || []) if (r[who] && r[when]) acts.push([r[who], r[when], kind]);
+  };
+  await Promise.all([
+    pull('chore_log', 'profile_id, created_at', 'profile_id', 'created_at', 'verk'),
+    pull('shopping_items', 'added_by, created_at', 'added_by', 'created_at', 'innkaup'),
+    pull('shopping_items', 'checked_by, checked_at', 'checked_by', 'checked_at', 'keypt'),
+    pull('photos', 'profile_id, created_at', 'profile_id', 'created_at', 'mynd'),
+    pull('kudos', 'from_id, created_at', 'from_id', 'created_at', 'hros'),
+    pull('reminders', 'created_by, created_at', 'created_by', 'created_at', 'aminning'),
+    pull('reminder_done', 'profile_id, done_at', 'profile_id', 'done_at', 'aminning_buin'),
+    pull('notifications', 'from_id, created_at', 'from_id', 'created_at', 'skilabod'),
+    pull('meals', 'updated_by, updated_at', 'updated_by', 'updated_at', 'matsedill'),
+    pull('wishes', 'owner_id, created_at', 'owner_id', 'created_at', 'osk'),
+    pull('stories', 'profile_id, created_at', 'profile_id', 'created_at', 'story'),
+  ]);
+
+  const weeks = [];
+  for (let i = WEEKS - 1; i >= 0; i--) {
+    const start = new Date(thisWeek.getTime() - i * 7 * 86400000);
+    const end = new Date(start.getTime() + 7 * 86400000);
+    const w = acts.filter(([, at]) => { const t = new Date(at); return t >= start && t < end; });
+    const people = new Set(w.map(([who]) => who));
+    const n = (kind) => w.filter((a) => a[2] === kind).length;
+    weeks.push({
+      week: start.toISOString().slice(0, 10),
+      activePeople: people.size,
+      activeParents: [...people].filter((p) => role[p] === 'parent').length,
+      activeKids: [...people].filter((p) => role[p] === 'child').length,
+      activeDays: new Set(w.map(([, at]) => String(at).slice(0, 10))).size,
+      actions: w.length,
+      chores: n('verk'),
+      choresByKids: w.filter((a) => a[2] === 'verk' && role[a[0]] === 'child').length,
+      shopAdded: n('innkaup'), shopBought: n('keypt'),
+      photoDays: new Set(w.filter((a) => a[2] === 'mynd').map(([, at]) => String(at).slice(0, 10))).size,
+      photos: n('mynd'), stories: n('story'), kudos: n('hros'),
+      remindersNew: n('aminning'), remindersDone: n('aminning_buin'),
+      messages: n('skilabod'), meals: n('matsedill'), wishes: n('osk'),
+    });
+  }
+
+  // Hver og einn, nafnlaust: „Foreldri 1“, „Barn 2“ (síðustu 28 dagar)
+  const d28 = Date.now() - 28 * 86400000;
+  const counter = { parent: 0, child: 0 };
+  const members = (profiles || []).map((p) => {
+    const mine = acts.filter(([who, at]) => who === p.id && new Date(at).getTime() >= d28);
+    const last = acts.filter(([who]) => who === p.id).map(([, at]) => at).sort().pop() || null;
+    return {
+      label: `${p.role === 'parent' ? 'Foreldri' : 'Barn'} ${++counter[p.role === 'parent' ? 'parent' : 'child']}`,
+      role: p.role, pin: !!p.pin_hash, push: pushOn.has(p.id),
+      activeDays28: new Set(mine.map(([, at]) => String(at).slice(0, 10))).size,
+      actions28: mine.length, lastActive: last,
+    };
+  });
+
+  return {
+    generatedAt: new Date().toISOString(),
+    members,
+    size: { total: members.length, parents: members.filter((m) => m.role === 'parent').length, kids: members.filter((m) => m.role === 'child').length },
+    weeks,
+  };
 }
 
 // ------------------------------------------------------------------

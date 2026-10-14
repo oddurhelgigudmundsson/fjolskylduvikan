@@ -125,6 +125,11 @@ Every family gets its **own Supabase project** (its own data, login and calendar
 The full step-by-step guide and the user guide for the test family are kept as Claude Docs.
 
 ## Statistics (Tölfræði)
+**Overview of all families in one place:** `https://oddurhelgigudmundsson.github.io/fjolskylduvikan/tolfraedi.html`. The page asks every family in `js/config.js` for anonymous totals (action `stats` in `clever-api`) and shows active families, active people and kids, active days, a weekly chart and a card per family. Nothing with names or content leaves the database: people show as "Foreldri 1", "Barn 2".
+
+Setup, once per family project: add the secret `ADMIN_KEY` (the same long random key in every project) under Edge Functions → Secrets, and make sure the latest `clever-api` is deployed. Then open the page and enter the key once; it's remembered in that browser. Without `ADMIN_KEY` the function never answers stats requests.
+
+The SQL files below give the same numbers straight from one project's SQL Editor:
 Two read-only queries built on what the database already stores (nothing extra is tracked). Paste into each family's SQL Editor and Run:
 - `supabase/tolfraedi-vikur.sql`: one row per week for the last 12 weeks: active people (parents/kids), active days, chores, shopping, photos, kudos, reminders, messages.
 - `supabase/tolfraedi-folk.sql`: one row per person for the last 28 days: PIN chosen, notifications on, active days, actions per area, points, last active.
