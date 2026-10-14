@@ -125,4 +125,4 @@ Every family gets its **own Supabase project** (its own data, login and calendar
 The full step-by-step guide and the user guide for the test family are kept as Claude Docs.
 
 ## Backlog
-Ideas that have been looked at but not built are in [BACKLOG.md](BACKLOG.md), ranked by priority with an overview table at the top. Loose, unsorted ideas live in [HUGMYNDIR.md](HUGMYNDIR.md).
+Ideas that have been looked at but not built are in [BACKLOG.md](BACKLOG.md), ranked by priority with an overview table at the top. Loose, unsorted ideas live in [HUGMYNDIR.md](HUGMYNDIR.md). Bigger ideas that need the app to grow first (full Krónan checkout, inviting grandparents as guests) are in [FRAMTID.md](FRAMTID.md).
