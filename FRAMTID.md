@@ -106,3 +106,28 @@ Stærri hugmyndir sem eiga heima í appinu **þegar það er komið lengra**: fl
 **Af hverju þetta er áhugavert**
 - Stór hópur fjölskyldna, og fá fjölskylduöpp sinna þessu vel. Sterkur sölupunktur ef appið fer á markað.
 - Krefst sömu endursmíði og annað hér: eigin innskráning hvers og eins og fólk sem tilheyrir fleiri en einni fjölskyldu (eins og ömmur og afar í gestahugmyndinni).
+
+---
+
+## 🚗 Árekstrar og skutl-plan
+*Skráð 14. okt. 2026*
+
+**Hugmyndin:** appið sér fyrir fram hvenær skipulagið gengur ekki upp og stingur upp á lausn, í stað þess að foreldrar uppgötvi það kl. 16:45 á þriðjudegi.
+
+**Dæmi**
+- „Á þriðjudag þarf Alma skutl í fimleika kl. 17 og Pétur í fótbolta kl. 17:15, en Kristín er á fundi til 18.“
+- „Á fimmtudag eru báðir foreldrar uppteknir þegar sækja þarf Thelmu. Á að biðja ömmu?“
+
+**Hvernig það gæti virkað**
+- **Sunnudagskvöld:** yfirlit yfir vikuna með árekstrum merktum, sem passar við Sunnudagsyfirlitið (#3 á backlog). Foreldrar úthluta skutli: „Ég tek það“.
+- **Hver tekur hvað:** byggir á „Hver skutlar?“ (#7 á backlog). Sá sem tekur skutl fær áminningu með tíma og stað.
+- **Ferðatími:** appið reiknar hvenær þarf að leggja af stað miðað við staðsetningu viðburðarins, og varar við ef tveir staðir eru of langt hvor frá öðrum á sama tíma.
+- **Lausn:** ef enginn foreldri er laus er stungið upp á gesti (ömmu, afa) og honum sent boð um að taka skutlið, sem passar við gestahugmyndina hér að ofan.
+
+**Það sem þarf að vera til staðar fyrst**
+- Dagatöl foreldra með vinnu og fundum, ekki bara fjölskyldudagatalið. Það byggir á „Eigið dagatal hvers og eins“ (#14 á backlog).
+- Viðburðir barna merktir sem „þarf skutl“, annaðhvort handvirkt eða út frá staðsetningu.
+- Gestir (ömmur og afar) í appinu, til að geta beðið þá.
+- Kortaþjónusta fyrir ferðatíma, t.d. Google Maps. Hún kostar eftir notkun.
+
+**Stóra myndin:** þetta er sú vinna í „3. vaktinni“ sem enginn sér en tekur mest. Samræmingin, ekki aksturinn sjálfur.
