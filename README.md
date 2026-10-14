@@ -96,6 +96,9 @@ Round avatars at the top of the home screen. Anyone can post one or more photos 
 - Photos are shrunk to 1440px and kept in the same locked `myndir` bucket under `story/`. The 5-minute clock in `clever-api` deletes expired photos from storage, so space doesn't fill up.
 - Code: `js/story.js`. Database: run `supabase/8-story.sql` once, and redeploy `clever-api` so expired photos get cleaned up.
 
+## Next up and calendar search
+The **Í dag** card on the home screen starts with "Næst: … eftir 45 mín" (or "Núna: … til kl. 15:45"). The calendar has a search box that looks 60 days ahead in titles and locations, one call to `clever-api` cached for 10 minutes (`bindCalSearch` in `js/app.js`). No SQL needed.
+
 ## Streaks and weekly chore review
 Each chore a child has done several scheduled times in a row shows 🔥 and the count (kids see only their own). Parents get a **Síðustu 7 dagar** card under Verk: per child "X af Y verkum", their longest streak, and the three chores forgotten most often. Computed in `js/app.js` (`streakOf`, `weekReviewCard`) from `chore_log`; no SQL needed.
 

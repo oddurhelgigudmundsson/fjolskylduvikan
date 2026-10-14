@@ -562,6 +562,8 @@ function demoEvents() {
   ev('Thelma Tannréttingar', ['thelma'], at(1, 13, 50), at(1, 14, 20));
   ev('Klilla', ['allir'], at(2, 12), at(2, 13));
   ev('Sumarbústaður', ['allir'], dateOnly(5), dateOnly(7), true);
+  ev('Pétur – tannlæknir', ['petur'], at(23, 9, 15), at(23, 9, 45), false, 'Tannlæknastofan Hamraborg');
+  ev('Foreldraviðtal Alma', ['alma', 'kristin'], at(30, 14), at(30, 14, 20), false, 'Melaskóli');
   return list.sort((a, b) => a.start.localeCompare(b.start));
 }
 

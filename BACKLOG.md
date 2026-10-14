@@ -14,7 +14,7 @@ Til að fá yfirlit: biddu Claude um „yfirlit yfir backlog“ og veldu númer.
 | 2 | Uppáhalds á innkaupalistanum | Algengar vörur sem takkar, eitt ýt á listann | Lítið | Daglega |
 | 3 | Sunnudagsyfirlitið | Einn skjár fyrir fjölskyldufundinn: stig, bikar, næsta vika | Miðlungs | Vikulega |
 | 4 | ~~Story~~ ✅ | **Komið 13. okt. 2026** | Miðlungs | Daglega |
-| 5 | Næst á dagskrá og leit | „Næst: Æfing eftir 45 mín“ á forsíðu, leit í dagatali | Lítið | Daglega |
+| 5 | ~~Næst á dagskrá og leit~~ ✅ | **Komið 14. okt. 2026** | Lítið | Daglega |
 | 6 | Uppskriftabanki | Vistaðir réttir, „Sama og síðasta vika“ á matseðil | Miðlungs | Vikulega |
 | 7 | Hver skutlar? | „Ég tek það“ á viðburðum, áminning til bílstjórans | Miðlungs | Nokkrum sinnum í viku |
 | 8 | Beiðnir til foreldra | „Má ég …?“ → Já / Nei / Ræðum það | Miðlungs | Nokkrum sinnum í viku |
@@ -78,8 +78,15 @@ Til að fá yfirlit: biddu Claude um „yfirlit yfir backlog“ og veldu númer.
 - Ný tafla `stories` (með `expires_at`) og `story_reactions`.
 - Klukkan sem keyrir áminningarnar (á 5 mín fresti) eyðir útrunnum myndum úr geymslunni, svo plássið fyllist ekki.
 
-## 5. Næst á dagskrá og leit
-*Skoðað 13. okt. 2026 · Stærð: lítið*
+## 5. Næst á dagskrá og leit ✅
+*Skoðað 13. okt. 2026 · Stærð: lítið · **Komið 14. okt. 2026***
+
+**Eins og það var smíðað**
+- Efst í „Í dag“ á forsíðunni: **Næst** + titill + „eftir 45 mín“ (eða „kl. 17:30“ ef meira en 3 klst. eru í það). Ef eitthvað er í gangi stendur **Núna** … „til kl. 15:45“. Ýtt → viðburðurinn opnast.
+- Leitarreitur í Dagatali: leitar í titli og staðsetningu næstu 60 daga. „tannlaeknir“ finnur líka „tannlæknir“. Niðurstöður flokkaðar eftir dögum („eftir 21 dag“).
+- Ekkert þurfti að breyta í Supabase.
+
+**Upprunaleg hugmynd**
 
 - Efst í „Í dag“: **„Næst: Fótboltaæfing Pétur eftir 45 mín“** í stað þess að lesa allan listann.
 - Leit í dagatalinu: „hvenær er næsti tannlæknir?“ leitar fram í tímann.

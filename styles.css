@@ -198,6 +198,15 @@ main { padding: 4px 16px calc(env(safe-area-inset-bottom) + 96px); display: flex
 .week-mini li:first-child { border-top: 0; }
 .week-mini .day { width: 34px; font-weight: 700; color: var(--muted); }
 .coming { text-align: center; font-size: 13px; color: var(--muted); padding: 6px 0; }
+.next-up { width: 100%; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; text-align: left; padding: 10px 12px; margin: 2px 0 10px; border-radius: 6px; background: color-mix(in srgb, var(--c) 12%, var(--card)); border-left: 3px solid var(--c); }
+.next-label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.next-title { font-weight: 700; flex: 1; min-width: 0; }
+.next-when { font-size: 14px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.cal-search { margin: 0 0 12px; }
+.cal-search input { width: 100%; font-size: 16px; }
+.search-note { text-align: center; padding: 16px 0; }
+.search-day { list-style: none; font-size: 13px; font-weight: 600; color: var(--muted); margin: 12px 4px 4px; }
+.search-hits .events .search-day:first-child { margin-top: 2px; }
 
 /* ---------- Innkaupalisti ---------- */
 .add-form {

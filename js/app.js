@@ -5,7 +5,7 @@ import { initStories, loadStories, storiesBar, bindStories } from './story.js';
 import { initBook, loadBook, renderBook, birthdayHomeCard, sizesLine } from './book.js';
 import { resolveFamily, chooseFamily, forgetFamily, familyCount } from './family.js';
 
-const APP_VERSION = 'fv-v34';
+const APP_VERSION = 'fv-v35';
 import {
   DAYS, DAYS_SHORT, MONTHS, CATEGORIES, iso, fromIso, addDays, startOfWeek, isoWeek, longDate, weekRange,
   esc, hashPin, firstName, categorize,
@@ -590,6 +590,29 @@ function jokeCard() {
     </section>`;
 }
 
+// „Næst: Fótboltaæfing eftir 45 mín“ efst í Í dag. Það sem er í gangi núna gengur fyrir.
+function untilText(ms) {
+  const min = Math.max(1, Math.round(ms / 60000));
+  if (min < 60) return `eftir ${min} mín`;
+  const h = Math.floor(min / 60), m = min % 60;
+  return h < 3 ? `eftir ${h} klst.${m ? ` ${m} mín` : ''}` : '';
+}
+function nextUp(today, now = new Date()) {
+  const timed = today.filter((e) => !e.allDay);
+  const running = timed.find((e) => new Date(e.start) <= now && new Date(e.end) > now);
+  const next = running || timed.find((e) => new Date(e.start) > now);
+  if (!next) return '';
+  const main = profileById(next.people[0]);
+  const color = next.people.includes('allir') || !main ? 'var(--accent)' : main.color;
+  const when = running ? `til kl. ${hhmm(next.end)}` : (untilText(new Date(next.start) - now) || `kl. ${hhmm(next.start)}`);
+  return `
+    <button class="next-up" data-event="${esc(next.id)}" style="--c:${esc(color)}">
+      <span class="next-label">${running ? 'Núna' : 'Næst'}</span>
+      <span class="next-title">${esc(next.title)}</span>
+      <span class="next-when">${esc(when)}</span>
+    </button>`;
+}
+
 function todayCard() {
   // Börn sjá bara sína viðburði (og það sem er fyrir alla); foreldrar sjá alla.
   // Viðburðir sem eru búnir detta út; heilsdagsviðburðir standa allan daginn.
@@ -603,7 +626,7 @@ function todayCard() {
   else if (!today.length) body = mine.length
     ? '<p class="muted">Allt búið í dag</p>'
     : '<p class="muted">Ekkert á dagskrá í dag</p>';
-  else body = `<ul class="events compact">${today.slice(0, 6).map(eventRow).join('')}</ul>
+  else body = `${nextUp(today, now)}<ul class="events compact">${today.slice(0, 6).map(eventRow).join('')}</ul>
     ${today.length > 6 ? `<p class="muted small">+${today.length - 6} í viðbót</p>` : ''}`;
   return `
     <section class="card">
@@ -822,9 +845,17 @@ function renderCal(view) {
       ${chip('allir', 'Allir', 'var(--accent)', famAv())}
       ${state.profiles.map((p) => chip(p.id, firstName(p.name), p.color, avatar(p, 'sm'))).join('')}
     </div>
-    ${weekNav()}
-    ${body}`;
+    <div class="cal-search">
+      <input type="search" id="cal-q" placeholder="Leita fram í tímann, t.d. tannlæknir" aria-label="Leita í dagatalinu"
+        value="${esc(state.calQuery || '')}" enterkeyhint="search" autocomplete="off">
+    </div>
+    <div id="cal-results"></div>
+    <div id="cal-week">
+      ${weekNav()}
+      ${body}
+    </div>`;
 
+  bindCalSearch(view);
   bindWeekNav(view);
   bindEvents(view);
   view.querySelectorAll('[data-filter]').forEach((b) => b.addEventListener('click', () => {
@@ -836,6 +867,83 @@ function renderCal(view) {
     state.calStatus = 'loading'; renderView(); await loadEvents(); renderView();
   });
 }
+
+// Leit: sækir næstu 60 daga einu sinni (geymt í 10 mín) og leitar í titli og staðsetningu
+const SEARCH_DAYS = 60;
+// „tannlaeknir“ finnur líka „tannlæknir“: kommur burt, æ→ae, ö→o, ð→d, þ→th
+const fold = (t) => String(t || '').toLowerCase()
+  .replace(/æ/g, 'ae').replace(/ö/g, 'o').replace(/ð/g, 'd').replace(/þ/g, 'th')
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+async function searchEvents() {
+  const fresh = state.searchCache && Date.now() - state.searchCache.at < 10 * 60000;
+  if (fresh) return state.searchCache.events;
+  const from = todayIso(), to = iso(addDays(new Date(), SEARCH_DAYS));
+  const res = await state.backend.listEvents(from, to);
+  state.searchCache = { at: Date.now(), events: res.events || [] };
+  return state.searchCache.events;
+}
+
+function bindCalSearch(view) {
+  const input = view.querySelector('#cal-q');
+  const out = view.querySelector('#cal-results');
+  const week = view.querySelector('#cal-week');
+  if (!input) return;
+  let timer, seq = 0;
+  const run = async () => {
+    const q = input.value.trim();
+    state.calQuery = q;
+    if (!q) { out.innerHTML = ''; week.hidden = false; return; }
+    week.hidden = true;
+    const my = ++seq;
+    if (!state.searchCache) out.innerHTML = '<p class="muted search-note">Leita…</p>';
+    let events;
+    try { events = await searchEvents(); }
+    catch (e) {
+      console.error(e);
+      if (my === seq) out.innerHTML = '<p class="muted search-note">Náði ekki í dagatalið. Athugaðu netið og reyndu aftur.</p>';
+      return;
+    }
+    if (my !== seq) return;
+    const words = fold(q).split(/\s+/).filter(Boolean);
+    const now = new Date();
+    const hits = events
+      .filter((e) => (e.allDay ? e.end > todayIso() : new Date(e.end) > now))
+      .filter((e) => { const hay = fold(e.title + ' ' + (e.location || '')); return words.every((w) => hay.includes(w)); })
+      .sort((a, b) => a.start.localeCompare(b.start));
+    if (!hits.length) {
+      out.innerHTML = `<p class="muted search-note">Ekkert fannst næstu ${SEARCH_DAYS} daga.</p>`;
+      return;
+    }
+    const shown = hits.slice(0, 30);
+    let lastDay = '';
+    out.innerHTML = `<section class="cal-day search-hits">
+      <h2 class="cal-day-title">${hits.length === 1 ? '1 viðburður' : `${hits.length} viðburðir`} <span class="muted">næstu ${SEARCH_DAYS} daga</span></h2>
+      <ul class="events">${shown.map((e) => {
+        const d = e.allDay ? fromIso(e.start) : new Date(e.start);
+        const key = iso(d);
+        const head = key !== lastDay ? `<li class="search-day">${esc(dayLabel(d))}</li>` : '';
+        lastDay = key;
+        return head + eventRow(e);
+      }).join('')}</ul>
+      ${hits.length > shown.length ? `<p class="muted small">+${hits.length - shown.length} í viðbót, skrifaðu nánar</p>` : ''}
+    </section>`;
+    out.querySelectorAll('[data-event]').forEach((b) =>
+      b.addEventListener('click', () => openEventSheet(hits.find((x) => x.id === b.dataset.event))));
+  };
+  input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(run, 200); });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Escape') { input.value = ''; run(); } });
+  if (input.value) run();
+}
+
+function dayLabel(d) {
+  const diff = Math.round((startOfDay(d) - startOfDay(new Date())) / 86400000);
+  const base = `${DAYS[d.getDay()]} ${d.getDate()}. ${MONTHS[d.getMonth()]}`;
+  if (diff === 0) return `Í dag · ${base}`;
+  if (diff === 1) return `Á morgun · ${base}`;
+  return `${base} · eftir ${diff} ${diff % 10 === 1 && diff % 100 !== 11 ? 'dag' : 'daga'}`;
+}
+const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
 
 function openEventSheet(e) {
   if (!e) return;
