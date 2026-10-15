@@ -57,6 +57,47 @@ Stærri hugmyndir sem eiga heima í appinu **þegar það er komið lengra**: fl
 
 ---
 
+## 🤖 Gervigreind yfir öllu: árekstrar og það sem þarf að sinna
+*Skráð 15. okt. 2026 · Lagið ofan á hubinn*
+
+**Hugmyndin:** þegar tengingarnar eru komnar les gervigreind **alla grunnana saman**: dagatöl foreldra (líka vinnu), Abler, Mentor, matseðil, innkaupalista og verk. Hún finnur það sem enginn einn grunnur sér: árekstra, gleymd atriði og það sem þarf að gera **áður** en það verður vandamál. Foreldrar fá ekki fleiri gögn, heldur stuttan lista yfir það sem þarf að ákveða.
+
+**Dæmi um það sem hún finnur**
+- **Árekstrar:** „Þriðjudag: Alma í fimleikum kl. 17 (Abler) og Pétur í leik kl. 17:15 í Egilshöll, en Kristín er á fundi til 18 (Outlook). Hver skutlar?“
+- **Undirbúningur:** „Föstudagur er starfsdagur (Mentor) en báðir foreldrar eru í vinnu. Á að biðja ömmu?“
+- **Hlutir sem gleymast:** „Bleikur dagur á morgun“, „Muna 2.000 kr. fyrir vettvangsferð“, „Æfingagjald Abler á gjalddaga á mánudag“.
+- **Matur og innkaup:** „Lasagna á miðvikudag, en enginn heima fyrir kl. 19 (leikur + fundur). Skipta við föstudagsréttinn?“ / „Vantar hakk á listann fyrir matseðil vikunnar.“
+- **Álag:** „Þessi vika er þung: 9 skutl, 3 kvöld þar sem báðir foreldrar eru uppteknir.“
+
+**Hvernig það birtist**
+- **Sunnudagskvöld:** „Vikan framundan“ með árekstrum merktum og tillögum. Foreldrar ýta á „Ég tek það“, „Biðja ömmu“ eða „Hunsa“. Passar við Sunnudagsyfirlitið (#3) og skutl-planið.
+- **Daglega:** í mesta lagi eitt til tvö atriði efst á forsíðu foreldra, bara ef eitthvað þarf að ákveða. Ekkert ef allt er í lagi.
+- **Spurðu appið:** „Hvenær er næsti frídagur í skólanum?“, „Hver er laus á fimmtudag kl. 16?“
+
+**Reglur sem skipta máli**
+- **Gervigreindin stingur upp á, foreldrar ákveða.** Hún breytir engu sjálf, bókar ekkert og sendir engum skilaboð nema foreldri samþykki.
+- **Börnin sjá ekki** árekstra eða álag foreldra, bara það sem þau varðar („Pabbi sækir þig kl. 17“).
+- **Vinnudagatöl** eru lesin sem „Upptekinn“, ekki titlar og fundarefni.
+- **Persónuvernd:** gögnin fara aðeins til gervigreindar sem geymir þau ekki og notar ekki til þjálfunar. Skýrt í skilmálum.
+
+**Hvernig það er byggt**
+- Allir grunnar eru nú þegar þýddir yfir í sömu mynd (viðburðir, áminningar, verk, vörur) í hubnum. Gervigreindin les þá mynd, ekki hvert app fyrir sig.
+- **Fyrst reglur, svo gervigreind:** einfaldir árekstrar (tveir staðir á sama tíma, enginn foreldri laus) finnast með venjulegum kóða, ódýrt og örugglega. Gervigreindin bætist við fyrir það sem þarf að skilja: póst, „bleikan dag“, hvað er mikilvægt og hvernig á að orða það.
+- Keyrir á þjóninum t.d. einu sinni á dag og á sunnudagskvöldi, auk þess þegar eitthvað nýtt kemur inn.
+
+**Kostnaður og viðskiptahlið**
+- Kostnaður við gervigreind er eftir notkun; með reglum fyrst og samantekt einu sinni á dag ætti hann að vera nokkrar krónur á fjölskyldu á mánuði (þarf að mæla).
+- Þetta er sterkasta ástæðan fyrir hærra verðþrepi: **„appið sem hugsar fyrir þriðju vaktina“**. Ekkert annað fjölskylduapp á Íslandi les skóla, íþróttir, vinnu og mat saman.
+
+**Það sem þarf að vera til staðar fyrst**
+- Hubinn með tengingum (hér að ofan), a.m.k. dagatöl foreldra og Abler/Mentor.
+- „Hver skutlar?“ (#7) svo hægt sé að úthluta.
+- Gestir (ömmur og afar) til að geta stungið upp á þeim.
+
+**Tengist:** „Árekstrar og skutl-plan“ (það er fyrsta útgáfan af þessu, án gervigreindar), „Skólinn og íþróttafélögin beint inn“ og „Mynd af blaði → viðburðir“ (sama gervigreind les póst og myndir).
+
+---
+
 ## 🛒 Full tenging við Krónuappið
 *Skráð 14. okt. 2026*
 
