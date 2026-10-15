@@ -4,6 +4,59 @@ Stærri hugmyndir sem eiga heima í appinu **þegar það er komið lengra**: fl
 
 ---
 
+## 🧩 Hub fjölskyldunnar: grunnur + tengingar
+*Skráð 15. okt. 2026 · Stóra myndin sem margar hugmyndirnar hér fyrir neðan falla undir*
+
+**Hugmyndin:** appið er **grunnur** (dagatal, matur, verk, skilaboð, samvera) og svo velur hver fjölskylda **tengingar** við öppin sem hún notar nú þegar. Allt kemur saman á einum stað, svo foreldrar þurfi ekki að opna sex öpp til að vita hvað er í gangi. Fjölskylduvikan verður yfirsýnin, ekki enn eitt appið.
+
+**Tengingar sem koma til greina**
+
+| Tenging | Hvað kemur inn | Hvernig það gæti tengst |
+|---|---|---|
+| Google (dagatal, Gmail) | Viðburðir, mögulega póstur frá skóla/félögum | „Skrá inn með Google“ (OAuth) |
+| Outlook / Microsoft 365 | Vinnudagatal (bara „Upptekinn“), póstur | „Skrá inn með Microsoft“ |
+| iCloud-dagatal | Viðburðir | iCal-slóð |
+| Abler (Sportabler) | Æfingar, leikir, mætingar, æfingagjöld | Athuga hvort til er API eða iCal; annars áframsendur póstur |
+| Mentor | Skóladagatal, starfsdagar, tilkynningar, heimavinna | Athuga API/iCal; annars áframsendur póstur |
+| Krónan | Innkaupalisti → karfa → pöntun | Snjallverslun Krónunnar (sjá hér að neðan) |
+| Strava / Coros / Garmin | Fjölskylduáskorun mánaðarins | OAuth, opin API |
+| Bankinn / Meniga | Sameiginleg útgjöld, tómstundagjöld | Síðar; viðkvæm gögn |
+
+**Hvernig það virkar fyrir notandann**
+- Undir **Stillingar → Tengingar** er listi yfir öpp með „Tengja“-takka, eins og í Slack eða Notion.
+- Hver tenging segir skýrt **hvað hún les og hver sér það** („Abler: æfingar Péturs, sýnilegt allri fjölskyldunni“).
+- Tenging skilar sér í það sem fjölskyldan þekkir nú þegar: viðburðir í dagatalið, áminningar á réttan mann, vörur á listann. Ekki nýir skjáir fyrir hvert app.
+- Hægt að aftengja hvenær sem er, og þá er öllu sem kom inn í gegnum hana eytt.
+
+**Hvernig það er byggt**
+- **Ein sameiginleg mynd af gögnum:** allt sem kemur inn verður að *viðburði*, *áminningu*, *verki* eða *vöru á lista*, merkt manneskju. Hver tenging er lítill „þýðandi“ yfir í þessa mynd. Ný tenging = nýr þýðandi, ekkert annað breytist.
+- **Þrjár gerðir tenginga**, eftir því hvað hvert app býður:
+  1. **Opin API / innskráning (OAuth):** Google, Microsoft, Strava. Best og öruggast.
+  2. **Dagatalsslóð (iCal):** virkar nú þegar í appinu.
+  3. **Áframsendur póstur + gervigreind:** fyrir öpp án API (sjá „Skólinn og íþróttafélögin beint inn“). Foreldri samþykkir allt sem kemur inn þannig.
+- Tengingarnar keyra á þjóninum (Supabase Edge Functions), ekki í símanum, svo þær uppfærast líka þegar appið er lokað.
+
+**Viðskiptahliðin**
+- **Grunnurinn** er það sem allir fá (í prufu og áskrift). **Tengingar** gætu verið hluti af hærra verðþrepi, t.d. „Fjölskylduvikan+ með tengingum“.
+- Tengingarnar eru það sem **erfiðast er að herma eftir**: erlend öpp tengjast ekki Abler, Mentor eða Krónunni. Það er íslenskt forskot, og sama hugsun gildir í hverju landi (staðbundin skóla- og íþróttakerfi).
+- **Samstarf í stað samkeppni:** Abler, Mentor og Krónan fá betri leið að foreldrum. Mögulegt að þau greiði fyrir eða kynni tenginguna.
+- Hver ný tenging gerir appið verðmætara fyrir þá sem eru þegar komnir, og gerir það erfiðara að hætta.
+
+**Í hvaða röð**
+1. Google- og Microsoft-dagatöl með innskráningu (kemur í stað iCal-leyndarmála; byggir á „Mörg dagatöl á hvern og einn“).
+2. Abler og Mentor, fyrst með iCal ef það er til, annars með áframsendum pósti.
+3. Krónan (byrjar á #15 á backlog).
+4. Hreyfing (Strava/Coros/Garmin) fyrir fjölskylduáskorunina.
+
+**Það sem þarf að vera til staðar fyrst**
+- Eigin innskráning hvers og eins og allar fjölskyldur í einu kerfi (sama endursmíði og annað hér).
+- Persónuvernd: hver tenging þarf skýrt samþykki og vinnslusamning; gögn um börn úr skóla eru sérlega viðkvæm.
+- Samtöl við Abler, Mentor og Krónuna um hvað þau geta opnað.
+
+**Tengist:** „Skólinn og íþróttafélögin beint inn“, „Full tenging við Krónuappið“, „Mörg dagatöl á hvern og einn“ og #14 og #15 á backlog. Þessar hugmyndir eru í raun einstakar tengingar í þessum hub.
+
+---
+
 ## 🛒 Full tenging við Krónuappið
 *Skráð 14. okt. 2026*
 
