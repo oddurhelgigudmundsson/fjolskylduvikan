@@ -98,6 +98,36 @@ Stærri hugmyndir sem eiga heima í appinu **þegar það er komið lengra**: fl
 
 ---
 
+## 🚌 Strætó: „Farðu út núna, vagninn kemur eftir 6 mín“
+*Skráð 15. okt. 2026 · Ein tenging í hubnum*
+
+**Hugmyndin:** barnið fær tilkynningu þegar það þarf að leggja af stað út á stoppistöð, miðað við hvar vagninn er í rauntíma. Ekki bara „Leið 15 kl. 16:42“ heldur „Farðu út núna, 15 kemur á Hlemm eftir 6 mín“.
+
+**Hvernig það virkar fyrir barnið**
+- Barnið (eða foreldri) vistar **stoppistöðvar og ferðir**: „Heim úr skólanum: leið 14 frá Melaskóla“, „Á æfingu: leið 15 frá Hlemmi“, og hve lengi það er að ganga á stoppistöðina.
+- **Tengt dagatalinu:** appið veit að Alma á fimleika kl. 17 og stingur upp á vagni sem nær þangað í tíma.
+- **Tilkynning á réttum tíma:** „Leið 15 kemur eftir 8 mín, þú ert 4 mín að ganga. Farðu eftir 4 mín.“ Ef vagninn er seinn færist tilkynningin.
+- Á heimaskjá barnsins: „Næsti vagn heim: 14 eftir 11 mín“.
+- **Foreldri getur fengið** „Alma tók 15 kl. 16:44“ ef barnið ýtir á „Ég er komin í vagninn“ (handvirkt, engin rakning).
+
+**Gögnin**
+- Strætó birtir tímatöflur sem opin gögn (GTFS) og rauntímastaðsetningu vagna. Sækja þarf um aðgang að rauntímagögnunum hjá Strætó (straeto.is → Opin gögn).
+- Þjónninn (Supabase) les rauntímann fyrir þær stoppistöðvar sem fjölskyldan hefur vistað, bara á þeim tímum sem skipta máli, og sendir push-tilkynningu eins og áminningarnar gera í dag.
+
+**Af hverju þetta er gott**
+- Virkar **án staðsetningar barnsins**: stoppistöðin er vistuð, ekki síminn rakinn. Mun léttara í persónuvernd en „Hvar er fjölskyldan?“.
+- Gefur unglingum sjálfstæði og foreldrum ró, og er nokkuð sem börn nota daglega.
+- Virkar líklega sem vefapp með push-tilkynningum eins og í dag; native app ekki forsenda.
+
+**Það sem þarf að skoða**
+- Skilmálar Strætó um notkun rauntímagagna í appi sem greitt er fyrir.
+- Hversu nákvæmur rauntíminn er og hvernig á að bregðast við seinkunum og niðurfelldum ferðum.
+- Utan höfuðborgarsvæðisins: landsbyggðarvagnar og önnur sveitarfélög.
+
+**Tengist:** hubnum (ein tenging enn), „Næst á dagskrá“ (#5, komið), og skutl-planinu („Pétur tekur strætó á æfingu, enginn þarf að skutla“).
+
+---
+
 ## 🛒 Full tenging við Krónuappið
 *Skráð 14. okt. 2026*
 
