@@ -448,9 +448,7 @@ async function calendar(body) {
 
   const texts = await Promise.all(feeds.map(async (f) => {
     try {
-      const res = await fetch(f.url, { headers: { 'User-Agent': 'Fjolskylduvikan/1.0' } });
-      if (!res.ok) throw new Error(String(res.status));
-      return await res.text();
+      return await fetchIcs(f.url, f.secret);
     } catch (e) {
       failed.push(f.secret);
       console.error('feed failed', f.secret, String(e));
@@ -491,6 +489,43 @@ export function whoIsIt(title, people) {
   const t = ' ' + String(title || '').toLowerCase() + ' ';
   return people.filter((p) => p.names.some(({ base, endings }) =>
     new RegExp(`(^|[^${L}])${escRe(base)}(${endings.map(escRe).join('|')})(?=[^${L}]|$)`).test(t))).map((p) => p.id);
+}
+
+// Sum kerfi (t.d. Abler) skila vefsíðu nema beðið sé um dagatal. Reynt með
+// mismunandi hausum og, ef vefsíða kemur samt, fylgt .ics/webcal-hlekk í henni.
+const ICS_HEADERS = [
+  { 'User-Agent': 'Fjolskylduvikan/1.0', Accept: 'text/calendar, */*;q=0.5' },
+  { 'User-Agent': 'Google-Calendar-Importer', Accept: 'text/calendar' },
+  { 'User-Agent': 'iOS/17.0 (21A329) dataaccessd/1.0', Accept: 'text/calendar, */*' },
+];
+const isIcs = (t) => /BEGIN:VCALENDAR/i.test(t);
+async function fetchIcs(url, secret) {
+  let last = '', info = [];
+  const urls = [url];
+  if (/^https:/i.test(url)) urls.push(url.replace(/^https:/i, 'http:'));
+  for (const u of urls) {
+    for (const h of ICS_HEADERS) {
+      let res, t;
+      try { res = await fetch(u, { headers: h, redirect: 'follow' }); t = await res.text(); }
+      catch (e) { info.push('err:' + String(e?.message || e).slice(0, 60)); continue; }
+      info.push(`${res.status}/${(res.headers.get('content-type') || '').split(';')[0]}/${new URL(res.url).host}`);
+      if (res.ok && isIcs(t)) return t;
+      last = t;
+      // Vefsíða sem vísar á dagatalsskrá
+      const m = t.match(/(?:href|content)=["']((?:webcal|https?):\/\/[^"']*?(?:\.ics|ical|calendar|feed)[^"']*)["']/i);
+      if (m) {
+        const link = m[1].replace(/&amp;/g, '&').replace(/^webcal:/i, 'https:');
+        try {
+          const r2 = await fetch(link, { headers: ICS_HEADERS[0] });
+          const t2 = await r2.text();
+          if (r2.ok && isIcs(t2)) return t2;
+        } catch {}
+      }
+    }
+  }
+  const title = (last.match(/<title[^>]*>([^<]{0,80})/i) || [])[1] || '';
+  console.error('feed not ical', secret, info.join(' '), `title=${JSON.stringify(title.trim())}`);
+  return last;
 }
 
 // Sum dagatöl (t.d. frá íþróttafélögum) senda BOM, auðar línur eða rusl utan
