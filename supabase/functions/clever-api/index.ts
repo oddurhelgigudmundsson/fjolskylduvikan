@@ -470,6 +470,10 @@ async function calendar(body) {
     }
     const n = (texts[i].match(/BEGIN:VEVENT/gi) || []).length;
     const starts = (texts[i].match(/^DTSTART[^:\r\n]*:(\d{8})/gim) || []).map((l) => l.slice(-8)).sort();
+    const ps = {}; (texts[i].match(/PARTSTAT=[A-Z-]+/gi) || []).forEach((x) => { ps[x] = (ps[x] || 0) + 1; });
+    const st = {}; (texts[i].match(/^STATUS:[A-Z-]+/gim) || []).forEach((x) => { st[x] = (st[x] || 0) + 1; });
+    const xs = [...new Set((texts[i].match(/^X-[A-Z0-9-]+/gim) || []))].slice(0, 12);
+    console.log('feedinfo', feed.secret, JSON.stringify(ps), JSON.stringify(st), xs.join(','));
     console.log('feed', feed.secret, `vevents=${n}`, `inRange=${list.length}`, `first=${starts[0] || '-'}`, `last=${starts[starts.length - 1] || '-'}`, `range=${body.from}..${body.to}`);
     for (const ev of list) {
       const key = ev.uid + '|' + ev.start;               // sami viðburður í báðum dagatölum → einu sinni
@@ -542,6 +546,15 @@ export function cleanIcs(text) {
   return t.split('\r\n').filter((line) => line.trim() !== '').join('\r\n') + '\r\n';
 }
 
+// Hafnað: allir þátttakendur hafa hafnað (t.d. barnið skráð „mæti ekki“ í Abler),
+// eða titillinn segir það. Ef aðrir í boði hafna en ekki allir, sést viðburðurinn áfram.
+const DECLINED_TITLE = /(^|[^a-záðéíóúýþæö])(hafna[ðd]|declined|afbo[ðd]a[ðd]|mæti ekki|maeti ekki)([^a-záðéíóúýþæö]|$)/i;
+export function isDeclined(item) {
+  const att = item.component.getAllProperties('attendee');
+  if (att.length && att.every((a) => String(a.getParameter('partstat') || '').toUpperCase() === 'DECLINED')) return true;
+  return DECLINED_TITLE.test(String(item.summary || ''));
+}
+
 export function expandFeed(text, from, to) {
   const parsed = ICAL.parse(cleanIcs(text));
   const roots = (Array.isArray(parsed[0]) ? parsed : [parsed]).map((c) => new ICAL.Component(c));
@@ -566,6 +579,7 @@ export function expandFeed(text, from, to) {
   const out = [];
   const push = (item, start, end) => {
     if (String(item.component.getFirstPropertyValue('status') || '').toUpperCase() === 'CANCELLED') return;
+    if (isDeclined(item)) return;
     const s = start.toJSDate(), e = (end || start).toJSDate();
     if (e <= from || s > to) return;
     const allDay = start.isDate;
