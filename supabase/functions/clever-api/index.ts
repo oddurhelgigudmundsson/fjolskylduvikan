@@ -460,7 +460,17 @@ async function calendar(body) {
 
   feeds.forEach((feed, i) => {
     if (!texts[i]) return;
-    for (const ev of expandFeed(texts[i], from, to)) {
+    // Eitt bilað dagatal má ekki stöðva hin: því er sleppt og það merkt sem „failed“
+    let list;
+    try { list = expandFeed(texts[i], from, to); }
+    catch (e) {
+      failed.push(feed.secret);
+      const t = texts[i];
+      console.error('feed parse failed', feed.secret, String(e?.message || e),
+        `length=${t.length}`, `hasVcal=${/BEGIN:VCALENDAR/i.test(t)}`, `startsWith=${JSON.stringify(t.slice(0, 15))}`);
+      return;
+    }
+    for (const ev of list) {
       const key = ev.uid + '|' + ev.start;               // sami viðburður í báðum dagatölum → einu sinni
       if (seen.has(key)) continue;
       seen.add(key);
@@ -468,6 +478,8 @@ async function calendar(body) {
       events.push({ ...ev, id: key, people: who.length ? who : feed.fallback });
     }
   });
+
+  if (failed.length) console.log('calendars', feeds.map((f) => f.secret).join(','), 'failed', failed.join(','));
 
   events.sort((a, b) => a.start.localeCompare(b.start));
   return json({ events, failed });
@@ -481,15 +493,28 @@ export function whoIsIt(title, people) {
     new RegExp(`(^|[^${L}])${escRe(base)}(${endings.map(escRe).join('|')})(?=[^${L}]|$)`).test(t))).map((p) => p.id);
 }
 
+// Sum dagatöl (t.d. frá íþróttafélögum) senda BOM, auðar línur eða rusl utan
+// um dagatalið, eða fleiri en eitt VCALENDAR. Hreinsað áður en lesið er.
+export function cleanIcs(text) {
+  let t = String(text || '').replace(/^\uFEFF/, '').replace(/\r\n|\r|\n/g, '\r\n');
+  const a = t.search(/BEGIN:VCALENDAR/i);
+  if (a < 0) throw new Error('not_ical');
+  const b = t.toUpperCase().lastIndexOf('END:VCALENDAR');
+  t = t.slice(a, b >= 0 ? b + 'END:VCALENDAR'.length : undefined);
+  return t.split('\r\n').filter((line) => line.trim() !== '').join('\r\n') + '\r\n';
+}
+
 export function expandFeed(text, from, to) {
-  const root = new ICAL.Component(ICAL.parse(text));
-  for (const tz of root.getAllSubcomponents('vtimezone')) {
+  const parsed = ICAL.parse(cleanIcs(text));
+  const roots = (Array.isArray(parsed[0]) ? parsed : [parsed]).map((c) => new ICAL.Component(c));
+  const all = (name) => roots.flatMap((r) => r.getAllSubcomponents(name));
+  for (const tz of all('vtimezone')) {
     try { ICAL.TimezoneService.register(tz); } catch { /* þegar skráð */ }
   }
 
   const masters = new Map();
   const exceptions = [];
-  for (const v of root.getAllSubcomponents('vevent')) {
+  for (const v of all('vevent')) {
     const e = new ICAL.Event(v);
     if (e.isRecurrenceException()) exceptions.push(e);
     else masters.set(e.uid, e);
