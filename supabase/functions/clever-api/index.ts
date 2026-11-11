@@ -468,6 +468,9 @@ async function calendar(body) {
         `length=${t.length}`, `hasVcal=${/BEGIN:VCALENDAR/i.test(t)}`, `startsWith=${JSON.stringify(t.slice(0, 15))}`);
       return;
     }
+    const n = (texts[i].match(/BEGIN:VEVENT/gi) || []).length;
+    const starts = (texts[i].match(/^DTSTART[^:\r\n]*:(\d{8})/gim) || []).map((l) => l.slice(-8)).sort();
+    console.log('feed', feed.secret, `vevents=${n}`, `inRange=${list.length}`, `first=${starts[0] || '-'}`, `last=${starts[starts.length - 1] || '-'}`, `range=${body.from}..${body.to}`);
     for (const ev of list) {
       const key = ev.uid + '|' + ev.start;               // sami viðburður í báðum dagatölum → einu sinni
       if (seen.has(key)) continue;
